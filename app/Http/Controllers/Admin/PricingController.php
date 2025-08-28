@@ -28,9 +28,10 @@ class PricingController extends Controller
             'description' => 'required|string',
             'price' => 'required|numeric|min:0',
             'currency' => 'required|string|max:3',
-            'billing_cycle' => 'required|in:monthly,yearly,one-time',
+            'billing_cycle' => 'required|in:monthly,quarterly,yearly,one-time',
             'is_popular' => 'boolean',
             'is_active' => 'boolean',
+            'is_featured' => 'boolean',
             'sort_order' => 'nullable|integer|min:0',
             'features' => 'nullable|array',
             'features.*.name' => 'required|string|max:255',
@@ -48,18 +49,21 @@ class PricingController extends Controller
             'billing_cycle' => $request->billing_cycle,
             'is_popular' => $request->has('is_popular'),
             'is_active' => $request->has('is_active'),
+            'is_featured' => $request->has('is_featured'),
             'sort_order' => $request->sort_order ?? 0
         ]);
 
         if ($request->has('features')) {
             foreach ($request->features as $index => $feature) {
-                $plan->features()->create([
-                    'name' => $feature['name'],
-                    'description' => $feature['description'] ?? null,
-                    'icon' => $feature['icon'] ?? null,
-                    'is_available' => $feature['is_available'] ?? true,
-                    'sort_order' => $index
-                ]);
+                if (!empty($feature['name'])) {
+                    $plan->features()->create([
+                        'name' => $feature['name'],
+                        'description' => $feature['description'] ?? null,
+                        'icon' => $feature['icon'] ?? null,
+                        'is_available' => true,
+                        'sort_order' => $index
+                    ]);
+                }
             }
         }
 
@@ -79,9 +83,10 @@ class PricingController extends Controller
             'description' => 'required|string',
             'price' => 'required|numeric|min:0',
             'currency' => 'required|string|max:3',
-            'billing_cycle' => 'required|in:monthly,yearly,one-time',
+            'billing_cycle' => 'required|in:monthly,quarterly,yearly,one-time',
             'is_popular' => 'boolean',
             'is_active' => 'boolean',
+            'is_featured' => 'boolean',
             'sort_order' => 'nullable|integer|min:0',
             'features' => 'nullable|array',
             'features.*.name' => 'required|string|max:255',
@@ -99,6 +104,7 @@ class PricingController extends Controller
             'billing_cycle' => $request->billing_cycle,
             'is_popular' => $request->has('is_popular'),
             'is_active' => $request->has('is_active'),
+            'is_featured' => $request->has('is_featured'),
             'sort_order' => $request->sort_order ?? 0
         ]);
 
@@ -109,13 +115,15 @@ class PricingController extends Controller
 
             // Create new features
             foreach ($request->features as $index => $feature) {
-                $pricing->features()->create([
-                    'name' => $feature['name'],
-                    'description' => $feature['description'] ?? null,
-                    'icon' => $feature['icon'] ?? null,
-                    'is_available' => $feature['is_available'] ?? true,
-                    'sort_order' => $index
-                ]);
+                if (!empty($feature['name'])) {
+                    $pricing->features()->create([
+                        'name' => $feature['name'],
+                        'description' => $feature['description'] ?? null,
+                        'icon' => $feature['icon'] ?? null,
+                        'is_available' => true,
+                        'sort_order' => $index
+                    ]);
+                }
             }
         }
 

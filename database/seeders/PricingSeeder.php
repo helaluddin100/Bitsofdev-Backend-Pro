@@ -76,8 +76,23 @@ class PricingSeeder extends Seeder
             unset($planData['features']);
 
             $planData['slug'] = \Illuminate\Support\Str::slug($planData['name']);
-            $plan = PricingPlan::create($planData);
 
+            // Check if plan already exists
+            $existingPlan = PricingPlan::where('slug', $planData['slug'])->first();
+
+            if ($existingPlan) {
+                // Update existing plan
+                $existingPlan->update($planData);
+                $plan = $existingPlan;
+
+                // Clear existing features and recreate them
+                $existingPlan->features()->delete();
+            } else {
+                // Create new plan
+                $plan = PricingPlan::create($planData);
+            }
+
+            // Create features
             foreach ($features as $index => $feature) {
                 $plan->features()->create([
                     'name' => $feature,

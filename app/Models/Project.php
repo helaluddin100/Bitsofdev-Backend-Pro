@@ -12,7 +12,7 @@ class Project extends Model
     protected $fillable = [
         'title',
         'slug',
-        'description',
+        'excerpt',
         'content',
         'featured_image',
         'client',
@@ -21,10 +21,11 @@ class Project extends Model
         'status',
         'technologies',
         'project_url',
-        'github_url',
         'priority',
         'is_featured',
-        'is_active'
+        'is_active',
+        'meta_title',
+        'meta_description'
     ];
 
     protected $casts = [
@@ -32,8 +33,6 @@ class Project extends Model
         'end_date' => 'date',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
-        'priority' => 'integer',
-        'technologies' => 'array',
     ];
 
     public function scopeActive($query)

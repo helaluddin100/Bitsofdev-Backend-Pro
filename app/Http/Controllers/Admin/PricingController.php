@@ -66,13 +66,13 @@ class PricingController extends Controller
         return redirect()->route('admin.pricing.index')->with('success', 'Pricing plan created successfully!');
     }
 
-    public function edit(PricingPlan $plan)
+    public function edit(PricingPlan $pricing)
     {
-        $plan->load('features');
-        return view('admin.pricing.edit', compact('plan'));
+        $pricing->load('features');
+        return view('admin.pricing.edit', compact('pricing'));
     }
 
-    public function update(Request $request, PricingPlan $plan)
+    public function update(Request $request, PricingPlan $pricing)
     {
         $request->validate([
             'name' => 'required|string|max:255',
@@ -90,7 +90,7 @@ class PricingController extends Controller
             'features.*.is_available' => 'boolean'
         ]);
 
-        $plan->update([
+        $pricing->update([
             'name' => $request->name,
             'slug' => Str::slug($request->name),
             'description' => $request->description,
@@ -105,11 +105,11 @@ class PricingController extends Controller
         // Update features
         if ($request->has('features')) {
             // Delete existing features
-            $plan->features()->delete();
+            $pricing->features()->delete();
 
             // Create new features
             foreach ($request->features as $index => $feature) {
-                $plan->features()->create([
+                $pricing->features()->create([
                     'name' => $feature['name'],
                     'description' => $feature['description'] ?? null,
                     'icon' => $feature['icon'] ?? null,
@@ -122,10 +122,10 @@ class PricingController extends Controller
         return redirect()->route('admin.pricing.index')->with('success', 'Pricing plan updated successfully!');
     }
 
-    public function destroy(PricingPlan $plan)
+    public function destroy(PricingPlan $pricing)
     {
-        $plan->features()->delete();
-        $plan->delete();
+        $pricing->features()->delete();
+        $pricing->delete();
         return redirect()->route('admin.pricing.index')->with('success', 'Pricing plan deleted successfully!');
     }
 }

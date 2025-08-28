@@ -15,3 +15,9 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# Problematic project images with permission issues
+public/images/projects/ecommerce-platform.jpg
+public/images/projects/iot-dashboard.jpg
+public/images/projects/project-dashboard.jpg
+public/images/projects/social-platform.jpg

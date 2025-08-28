@@ -95,7 +95,11 @@
 
                             <div class="mb-3">
                                 <label for="featured_image" class="form-label">Featured Image</label>
-                                <input type="file" class="form-control" name="featured_image" id="featured_image" accept="image/*">
+                                <input type="file" class="form-control" name="featured_image" id="featured_image" accept="image/*" onchange="previewImage(this)">
+                                <div id="image-preview" class="mt-2" style="display: none;">
+                                    <img id="preview-img" src="" alt="Preview" style="max-width: 300px; height: auto; border-radius: 8px;">
+                                </div>
+                                <small class="form-text text-muted">Image will be automatically converted to WebP format and optimized for web.</small>
                             </div>
 
                             <div class="mb-3">
@@ -124,4 +128,20 @@
         </div>
 
     </div>
+@endsection
+
+@section('js')
+<script>
+// Image preview functionality
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('preview-img').src = e.target.result;
+            document.getElementById('image-preview').style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
 @endsection

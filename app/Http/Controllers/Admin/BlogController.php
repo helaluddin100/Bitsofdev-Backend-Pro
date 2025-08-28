@@ -69,37 +69,94 @@ class BlogController extends Controller
         return view('admin.blogs.edit', compact('blog', 'categories'));
     }
 
+    public function show(Blog $blog)
+    {
+        try {
+            $blog->load(['category', 'user']);
+
+            // Log the show request for debugging
+            Log::info('Blog Show Request', [
+                'blog_id' => $blog->id,
+                'blog_title' => $blog->title,
+                'blog_status' => $blog->status,
+                'has_category' => $blog->category ? true : false,
+                'has_user' => $blog->user ? true : false
+            ]);
+
+            return view('admin.blogs.show', compact('blog'));
+        } catch (\Exception $e) {
+            Log::error('Blog Show Error', [
+                'blog_id' => $blog->id ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->withErrors(['error' => 'Failed to load blog post: ' . $e->getMessage()]);
+        }
+    }
+
     public function update(Request $request, Blog $blog)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'excerpt' => 'required|string',
-            'content' => 'required|string',
-            'category_id' => 'required|exists:categories,id',
-            'status' => 'required|in:draft,published,archived',
-            'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-            'is_featured' => 'boolean',
-            'meta_title' => 'nullable|string|max:60',
-            'meta_description' => 'nullable|string|max:160'
-        ]);
+        try {
+            // Log the update request for debugging
+            Log::info('Blog Update Request', [
+                'blog_id' => $blog->id,
+                'method' => $request->method(),
+                'all_data' => $request->all(),
+                'files' => $request->hasFile('featured_image') ? 'Has file' : 'No file'
+            ]);
 
-        $data = $request->all();
-        $data['slug'] = Str::slug($request->title);
-        $data['published_at'] = $request->status === 'published' ? now() : null;
-        $data['is_featured'] = $request->has('is_featured');
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'excerpt' => 'required|string',
+                'content' => 'required|string',
+                'category_id' => 'required|exists:categories,id',
+                'status' => 'required|in:draft,published,archived',
+                'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+                'is_featured' => 'boolean',
+                'meta_title' => 'nullable|string|max:60',
+                'meta_description' => 'nullable|string|max:160'
+            ]);
 
-        if ($request->hasFile('featured_image')) {
-            // Delete old image
-            if ($blog->featured_image && file_exists(public_path($blog->featured_image))) {
-                unlink(public_path($blog->featured_image));
+            $data = $request->all();
+            $data['slug'] = Str::slug($request->title);
+            $data['published_at'] = $request->status === 'published' ? now() : null;
+            $data['is_featured'] = $request->has('is_featured');
+
+            if ($request->hasFile('featured_image')) {
+                // Delete old image
+                if ($blog->featured_image && file_exists(public_path($blog->featured_image))) {
+                    unlink(public_path($blog->featured_image));
+                }
+
+                $data['featured_image'] = $this->processAndConvertImage($request->file('featured_image'));
             }
 
-            $data['featured_image'] = $this->processAndConvertImage($request->file('featured_image'));
+            // Log the data before update
+            Log::info('Blog Update Data', [
+                'blog_id' => $blog->id,
+                'update_data' => $data
+            ]);
+
+            $blog->update($data);
+
+            // Log successful update
+            Log::info('Blog Updated Successfully', [
+                'blog_id' => $blog->id,
+                'title' => $blog->title
+            ]);
+
+            return redirect()->route('admin.blogs.index')->with('success', 'Blog post updated successfully!');
+        } catch (\Exception $e) {
+            // Log the error
+            Log::error('Blog Update Error', [
+                'blog_id' => $blog->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->withInput()->withErrors(['error' => 'Failed to update blog post: ' . $e->getMessage()]);
         }
-
-        $blog->update($data);
-
-        return redirect()->route('admin.blogs.index')->with('success', 'Blog post updated successfully!');
     }
 
     public function destroy(Blog $blog)
@@ -160,7 +217,7 @@ class BlogController extends Controller
     /**
      * Generate SEO suggestions for the blog post
      */
-            public function getSeoSuggestions(Request $request)
+    public function getSeoSuggestions(Request $request)
     {
         // Log the entire request for debugging
         Log::info('SEO Analysis Request Received', [
@@ -202,6 +259,83 @@ class BlogController extends Controller
             'message' => 'SEO test endpoint is working',
             'timestamp' => now()
         ]);
+    }
+
+    /**
+     * Test method for debugging route model binding
+     */
+    public function testBinding($id)
+    {
+        try {
+            $blog = Blog::findOrFail($id);
+            return response()->json([
+                'status' => 'success',
+                'blog' => [
+                    'id' => $blog->id,
+                    'title' => $blog->title,
+                    'status' => $blog->status,
+                    'category_id' => $blog->category_id,
+                    'user_id' => $blog->user_id
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'id_requested' => $id
+            ], 500);
+        }
+    }
+
+    /**
+     * Simple test method to check if controller is accessible
+     */
+    public function testController()
+    {
+        return response()->json([
+            'status' => 'success',
+            'message' => 'BlogController is working correctly',
+            'timestamp' => now(),
+            'available_methods' => [
+                'index',
+                'create',
+                'store',
+                'show',
+                'edit',
+                'update',
+                'destroy'
+            ]
+        ]);
+    }
+
+    /**
+     * Debug method to list all blogs
+     */
+    public function debugBlogs()
+    {
+        try {
+            $blogs = Blog::with(['category', 'user'])->get();
+
+            return response()->json([
+                'status' => 'success',
+                'total_blogs' => $blogs->count(),
+                'blogs' => $blogs->map(function ($blog) {
+                    return [
+                        'id' => $blog->id,
+                        'title' => $blog->title,
+                        'status' => $blog->status,
+                        'category' => $blog->category ? $blog->category->name : 'No Category',
+                        'user' => $blog->user ? $blog->user->name : 'No User'
+                    ];
+                })
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
     }
 
     private function generateMetaTitle($title)

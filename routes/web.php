@@ -58,7 +58,10 @@ Route::namespace('App\Http\Controllers')->group(function () {
         Route::resource('blogs', BlogController::class);
         Route::post('blogs/seo-suggestions', [BlogController::class, 'getSeoSuggestions'])->name('blogs.seo-suggestions');
         Route::get('blogs/test-seo', [BlogController::class, 'testSeo'])->name('blogs.test-seo');
-        Route::get('blogs/test-auth', function() {
+        Route::get('blogs/test-binding/{id}', [BlogController::class, 'testBinding'])->name('blogs.test-binding');
+        Route::get('blogs/test-controller', [BlogController::class, 'testController'])->name('blogs.test-controller');
+        Route::get('blogs/debug', [BlogController::class, 'debugBlogs'])->name('blogs.debug');
+        Route::get('blogs/test-auth', function () {
             return response()->json([
                 'user' => auth()->user() ? auth()->user()->id : 'Not authenticated',
                 'role' => auth()->user() ? auth()->user()->role : 'No role',

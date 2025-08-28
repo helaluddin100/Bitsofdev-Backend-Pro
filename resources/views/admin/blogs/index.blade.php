@@ -65,6 +65,10 @@
                                             </td>
                                             <td>{{ $blog->views }}</td>
                                             <td>
+                                                <a href="{{ route('admin.blogs.show', $blog->id) }}"
+                                                    class="btn btn-info btn-icon">
+                                                    <i data-feather="eye"></i>
+                                                </a>
                                                 <a href="{{ route('admin.blogs.edit', $blog->id) }}"
                                                     class="btn btn-primary btn-icon">
                                                     <i data-feather="edit"></i>

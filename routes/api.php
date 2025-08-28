@@ -39,6 +39,8 @@ Route::get('/shop/{id}', [ShopController::class, 'edit']);
 Route::get('/blogs', [BlogController::class, 'index']);
 Route::get('/blogs/featured', [BlogController::class, 'featured']);
 Route::get('/blogs/categories', [BlogController::class, 'categories']);
+Route::get('/blogs/debug', [BlogController::class, 'debug']);
+Route::get('/blogs/debug/{slug}', [BlogController::class, 'debug']);
 Route::get('/blogs/{slug}', [BlogController::class, 'show']);
 
 // Project API Routes

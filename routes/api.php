@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\PricingController;
+use App\Http\Controllers\Api\AboutController;
 
 // Public routes (no authentication required)
 Route::post('/register', [AuthController::class, 'register']);
@@ -34,6 +35,13 @@ Route::post('create-shop', [ShopController::class, 'store']);
 Route::get('/user/{userId}/shops', [ShopController::class, 'getUserShops']);
 Route::post('/update-shop/{shop}', [ShopController::class, 'update']);
 Route::get('/shop/{id}', [ShopController::class, 'edit']);
+
+// About API Routes
+Route::get('/about', [AboutController::class, 'index']);
+Route::get('/about/all', [AboutController::class, 'all']);
+Route::get('/about/values', [AboutController::class, 'values']);
+Route::get('/about/processes', [AboutController::class, 'processes']);
+Route::get('/about/team', [AboutController::class, 'team']);
 
 // Blog API Routes
 Route::get('/blogs', [BlogController::class, 'index']);

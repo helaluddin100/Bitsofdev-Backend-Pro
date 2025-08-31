@@ -104,6 +104,26 @@
                 </div>
             </li>
 
+            <!-- About Management -->
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="collapse" href="#about-management" role="button" aria-expanded="false"
+                    aria-controls="about-management">
+                    <i class="link-icon" data-feather="info"></i>
+                    <span class="link-title">About Management</span>
+                    <i class="link-arrow" data-feather="chevron-down"></i>
+                </a>
+                <div class="collapse" id="about-management">
+                    <ul class="nav sub-menu">
+                        <li class="nav-item">
+                            <a href="{{ route('admin.about.index') }}" class="nav-link">Company Information</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.about.edit') }}" class="nav-link">Edit Information</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
             <li class="nav-item nav-category">System</li>
 
             <!-- User Management -->

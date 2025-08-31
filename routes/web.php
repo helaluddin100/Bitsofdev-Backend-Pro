@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProjectController;
 use App\Http\Controllers\Admin\TeamController;
 use App\Http\Controllers\Admin\PricingController;
+use App\Http\Controllers\Admin\AboutController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Artisan;
@@ -78,6 +79,17 @@ Route::namespace('App\Http\Controllers')->group(function () {
 
         // Pricing Management
         Route::resource('pricing', PricingController::class);
+
+        // About Management
+        Route::get('about', [AboutController::class, 'index'])->name('about.index');
+        Route::get('about/edit', [AboutController::class, 'edit'])->name('about.edit');
+        Route::post('about/update', [AboutController::class, 'update'])->name('about.update');
+        Route::post('about/values', [AboutController::class, 'storeValue'])->name('about.values.store');
+        Route::post('about/values/{value}', [AboutController::class, 'updateValue'])->name('about.values.update');
+        Route::delete('about/values/{value}', [AboutController::class, 'destroyValue'])->name('about.values.destroy');
+        Route::post('about/processes', [AboutController::class, 'storeProcess'])->name('about.processes.store');
+        Route::post('about/processes/{process}', [AboutController::class, 'updateProcess'])->name('about.processes.update');
+        Route::delete('about/processes/{process}', [AboutController::class, 'destroyProcess'])->name('about.processes.destroy');
     });
 });
 

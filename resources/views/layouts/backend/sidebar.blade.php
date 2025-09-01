@@ -124,13 +124,21 @@
                 </div>
             </li>
 
-            <!-- Analytics -->
-            <li class="nav-item">
-                <a href="{{ route('admin.analytics.index') }}" class="nav-link">
-                    <i class="link-icon" data-feather="bar-chart-2"></i>
-                    <span class="link-title">Analytics</span>
-                </a>
-            </li>
+                    <!-- Analytics -->
+        <li class="nav-item">
+            <a href="{{ route('admin.analytics.index') }}" class="nav-link">
+                <i class="link-icon" data-feather="bar-chart-2"></i>
+                <span class="link-title">Analytics</span>
+            </a>
+        </li>
+
+        <!-- Visitor Data -->
+        <li class="nav-item">
+            <a href="{{ route('admin.visitors.index') }}" class="nav-link">
+                <i class="link-icon" data-feather="users"></i>
+                <span class="link-title">Visitor Data</span>
+            </a>
+        </li>
 
             <li class="nav-item nav-category">System</li>
 

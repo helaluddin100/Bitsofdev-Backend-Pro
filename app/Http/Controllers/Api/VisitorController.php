@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Exception;
 
 class VisitorController extends Controller
 {
@@ -139,35 +140,97 @@ class VisitorController extends Controller
     }
 
     /**
-     * Get location data from IP using external service
+     * Get location data from IP address
      */
     private function getLocationFromIP($ip)
     {
         try {
-            // Use ipapi.co service (free tier available)
-            $response = file_get_contents("http://ip-api.com/json/{$ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,mobile,proxy,hosting");
+            // Handle localhost and private IPs
+            if (
+                in_array($ip, ['127.0.0.1', '::1', 'localhost']) ||
+                filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false
+            ) {
+
+                // For localhost/private IPs, try to get external IP
+                $externalIP = $this->getExternalIP();
+                if ($externalIP && $externalIP !== $ip) {
+                    $ip = $externalIP;
+                } else {
+                    // Fallback for localhost
+                    return [
+                        'country' => 'Local Development',
+                        'city' => 'Localhost',
+                        'region' => 'Development Environment',
+                        'ip' => $ip,
+                        'isp' => 'Local Network'
+                    ];
+                }
+            }
+
+            // Use ip-api.com for location data
+            $response = file_get_contents("http://ip-api.com/json/{$ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,mobile,proxy,hosting,query");
+
+            if ($response === false) {
+                throw new Exception('Failed to fetch location data');
+            }
+
             $data = json_decode($response, true);
 
-            if ($data && $data['status'] === 'success') {
+            if ($data['status'] === 'success') {
                 return [
-                    'country' => $data['country'] ?? null,
-                    'country_code' => $data['countryCode'] ?? null,
-                    'region' => $data['regionName'] ?? null,
-                    'city' => $data['city'] ?? null,
-                    'zip' => $data['zip'] ?? null,
-                    'latitude' => $data['lat'] ?? null,
-                    'longitude' => $data['lon'] ?? null,
-                    'timezone' => $data['timezone'] ?? null,
-                    'isp' => $data['isp'] ?? null,
-                    'organization' => $data['org'] ?? null,
+                    'country' => $data['country'] ?? 'Unknown',
+                    'country_code' => $data['countryCode'] ?? '',
+                    'region' => $data['regionName'] ?? 'Unknown',
+                    'city' => $data['city'] ?? 'Unknown',
+                    'zip' => $data['zip'] ?? '',
+                    'lat' => $data['lat'] ?? null,
+                    'lon' => $data['lon'] ?? null,
+                    'timezone' => $data['timezone'] ?? '',
+                    'isp' => $data['isp'] ?? 'Unknown',
+                    'org' => $data['org'] ?? '',
+                    'ip' => $data['query'] ?? $ip,
                     'mobile' => $data['mobile'] ?? false,
                     'proxy' => $data['proxy'] ?? false,
-                    'hosting' => $data['hosting'] ?? false,
+                    'hosting' => $data['hosting'] ?? false
                 ];
             }
-        } catch (\Exception $e) {
-            // Log error but don't fail the request
+
+            throw new Exception('Location API returned error: ' . ($data['message'] ?? 'Unknown error'));
+        } catch (Exception $e) {
             Log::warning('Failed to get location from IP: ' . $e->getMessage());
+
+            // Return fallback data
+            return [
+                'country' => 'Unknown',
+                'city' => 'Unknown',
+                'region' => 'Unknown',
+                'ip' => $ip,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get external IP address
+     */
+    private function getExternalIP()
+    {
+        try {
+            $services = [
+                'https://api.ipify.org',
+                'https://ipinfo.io/ip',
+                'https://icanhazip.com',
+                'https://ident.me'
+            ];
+
+            foreach ($services as $service) {
+                $ip = @file_get_contents($service);
+                if ($ip !== false && filter_var(trim($ip), FILTER_VALIDATE_IP)) {
+                    return trim($ip);
+                }
+            }
+        } catch (Exception $e) {
+            Log::warning('Failed to get external IP: ' . $e->getMessage());
         }
 
         return null;

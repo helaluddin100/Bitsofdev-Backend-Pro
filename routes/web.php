@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\TeamController;
 use App\Http\Controllers\Admin\PricingController;
 use App\Http\Controllers\Admin\AboutController;
 use App\Http\Controllers\Admin\AnalyticsController;
+use App\Http\Controllers\Admin\VisitorDataController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Artisan;
@@ -99,6 +100,13 @@ Route::namespace('App\Http\Controllers')->group(function () {
         Route::get('analytics/test', function () {
             return view('admin.analytics.test');
         })->name('analytics.test');
+
+        // Visitor Data Management
+        Route::get('visitors', [VisitorDataController::class, 'index'])->name('visitors.index');
+        Route::get('visitors/{visitor}', [VisitorDataController::class, 'show'])->name('visitors.show');
+        Route::delete('visitors/{visitor}', [VisitorDataController::class, 'destroy'])->name('visitors.destroy');
+        Route::post('visitors/bulk-delete', [VisitorDataController::class, 'bulkDelete'])->name('visitors.bulk-delete');
+        Route::get('visitors/export', [VisitorDataController::class, 'export'])->name('visitors.export');
     });
 });
 

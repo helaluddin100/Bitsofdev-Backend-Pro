@@ -15,13 +15,43 @@
                                     class="btn btn-success btn-sm">
                                     <i class="fas fa-download me-1"></i> Export CSV
                                 </a>
+                                <button type="button" class="btn btn-warning btn-sm" id="selectAllBtn">
+                                    <i class="fas fa-check-square me-1"></i> Select All
+                                </button>
                                 <button type="button" class="btn btn-danger btn-sm" id="bulkDeleteBtn"
                                     style="display: none;">
-                                    <i class="fas fa-trash me-1"></i> Delete Selected
+                                    <i class="fas fa-trash me-1"></i> Delete Selected (<span id="selectedCount">0</span>)
                                 </button>
                             </div>
                         </div>
                         <div class="card-body">
+                            <!-- Success/Error Messages -->
+                            @if (session('success'))
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    {{ session('success') }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            @endif
+
+                            @if (session('error'))
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    {{ session('error') }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            @endif
+
+                            <!-- Debug Information (Remove in production) -->
+                            @if (config('app.debug'))
+                                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Debug Mode:</strong> Bulk delete form action:
+                                    {{ route('admin.visitors.bulk-delete') }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            @endif
+
                             <!-- Summary Cards -->
                             <div class="row mb-4">
                                 <div class="col-md-3">
@@ -254,17 +284,13 @@
                                                     <div class="btn-group btn-group-sm">
                                                         <a href="{{ route('admin.visitors.show', $visitor) }}"
                                                             class="btn btn-info btn-sm" title="View Details">
-                                                            <i class="fas fa-eye"></i>
+                                                            <i class="fas fa-eye me-1"></i> View
                                                         </a>
-                                                        <form action="{{ route('admin.visitors.destroy', $visitor) }}"
-                                                            method="POST" class="d-inline delete-form">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="btn btn-danger btn-sm"
-                                                                title="Delete" onclick="return confirm('Are you sure?')">
-                                                                <i class="fas fa-trash"></i>
-                                                            </button>
-                                                        </form>
+                                                        <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                                            data-visitor-id="{{ $visitor->id }}"
+                                                            data-visitor-url="{{ $visitor->page_url }}" title="Delete">
+                                                            <i class="fas fa-trash me-1"></i> Delete
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -300,35 +326,80 @@
     <!-- Bulk Delete Form -->
     <form id="bulkDeleteForm" action="{{ route('admin.visitors.bulk-delete') }}" method="POST" style="display: none;">
         @csrf
-        <input type="hidden" name="visitor_ids" id="bulkDeleteIds">
+        <input type="hidden" name="visitor_ids[]" id="bulkDeleteIds">
     </form>
 @endsection
 
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Select All functionality
+            // Elements
             const selectAll = document.getElementById('selectAll');
+            const selectAllBtn = document.getElementById('selectAllBtn');
             const checkboxes = document.querySelectorAll('.visitor-checkbox');
             const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            const selectedCountSpan = document.getElementById('selectedCount');
 
+            // Select All functionality
             selectAll.addEventListener('change', function() {
+                const isChecked = this.checked;
                 checkboxes.forEach(checkbox => {
-                    checkbox.checked = this.checked;
+                    checkbox.checked = isChecked;
                 });
                 updateBulkDeleteButton();
+                updateSelectAllButton();
             });
 
+            // Select All Button functionality
+            selectAllBtn.addEventListener('click', function() {
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                const newState = !allChecked;
+
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = newState;
+                });
+                selectAll.checked = newState;
+
+                updateBulkDeleteButton();
+                updateSelectAllButton();
+            });
+
+            // Individual checkbox functionality
             checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', updateBulkDeleteButton);
+                checkbox.addEventListener('change', function() {
+                    updateBulkDeleteButton();
+                    updateSelectAllButton();
+                });
             });
 
+            // Update bulk delete button
             function updateBulkDeleteButton() {
                 const checkedBoxes = document.querySelectorAll('.visitor-checkbox:checked');
-                if (checkedBoxes.length > 0) {
+                const count = checkedBoxes.length;
+
+                if (count > 0) {
                     bulkDeleteBtn.style.display = 'inline-block';
+                    selectedCountSpan.textContent = count;
                 } else {
                     bulkDeleteBtn.style.display = 'none';
+                    selectedCountSpan.textContent = '0';
+                }
+            }
+
+            // Update select all button
+            function updateSelectAllButton() {
+                const totalCheckboxes = checkboxes.length;
+                const checkedCheckboxes = document.querySelectorAll('.visitor-checkbox:checked').length;
+
+                if (checkedCheckboxes === 0) {
+                    selectAllBtn.innerHTML = '<i class="fas fa-check-square me-1"></i> Select All';
+                    selectAllBtn.className = 'btn btn-warning btn-sm';
+                } else if (checkedCheckboxes === totalCheckboxes) {
+                    selectAllBtn.innerHTML = '<i class="fas fa-square me-1"></i> Deselect All';
+                    selectAllBtn.className = 'btn btn-secondary btn-sm';
+                } else {
+                    selectAllBtn.innerHTML = '<i class="fas fa-minus-square me-1"></i> Select All';
+                    selectAllBtn.className = 'btn btn-warning btn-sm';
                 }
             }
 
@@ -339,10 +410,62 @@
 
                 if (ids.length === 0) return;
 
-                if (confirm(`Are you sure you want to delete ${ids.length} visitor records?`)) {
-                    document.getElementById('bulkDeleteIds').value = JSON.stringify(ids);
-                    document.getElementById('bulkDeleteForm').submit();
+                if (confirm(
+                        `Are you sure you want to delete ${ids.length} visitor records?\n\nThis action cannot be undone.`
+                    )) {
+                    // Clear previous dynamic inputs
+                    const form = document.getElementById('bulkDeleteForm');
+                    const existingInputs = form.querySelectorAll('input[name="visitor_ids[]"]');
+                    existingInputs.forEach(input => input.remove());
+
+                    // Add each ID as a separate input
+                    ids.forEach(id => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'visitor_ids[]';
+                        input.value = id;
+                        form.appendChild(input);
+                    });
+
+                    // Show loading state
+                    bulkDeleteBtn.disabled = true;
+                    bulkDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Deleting...';
+
+                    // Submit the form
+                    form.submit();
                 }
+            });
+
+            // Individual delete buttons
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const visitorId = this.getAttribute('data-visitor-id');
+                    const visitorUrl = this.getAttribute('data-visitor-url');
+
+                    if (confirm(
+                            `Are you sure you want to delete this visitor record?\n\nPage: ${visitorUrl}\n\nThis action cannot be undone.`
+                        )) {
+                        // Create and submit delete form
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = `{{ route('admin.visitors.index') }}/${visitorId}`;
+
+                        const csrfToken = document.createElement('input');
+                        csrfToken.type = 'hidden';
+                        csrfToken.name = '_token';
+                        csrfToken.value = '{{ csrf_token() }}';
+
+                        const methodField = document.createElement('input');
+                        methodField.type = 'hidden';
+                        methodField.name = '_method';
+                        methodField.value = 'DELETE';
+
+                        form.appendChild(csrfToken);
+                        form.appendChild(methodField);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                });
             });
 
             // Auto-submit form on filter change
@@ -354,6 +477,9 @@
                     filterForm.submit();
                 });
             });
+
+            // Initialize button states
+            updateSelectAllButton();
         });
     </script>
 @endpush

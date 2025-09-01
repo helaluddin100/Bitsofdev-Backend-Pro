@@ -274,9 +274,14 @@ class VisitorDataController extends Controller
             'visitor_ids.*' => 'exists:visitors,id'
         ]);
 
-        $deleted = Visitor::whereIn('id', $request->visitor_ids)->delete();
+        try {
+            $deleted = Visitor::whereIn('id', $request->visitor_ids)->delete();
 
-        return redirect()->route('admin.visitors.index')
-            ->with('success', "{$deleted} visitor records deleted successfully");
+            return redirect()->route('admin.visitors.index')
+                ->with('success', "{$deleted} visitor records deleted successfully");
+        } catch (\Exception $e) {
+            return redirect()->route('admin.visitors.index')
+                ->with('error', 'Failed to delete visitor records: ' . $e->getMessage());
+        }
     }
 }

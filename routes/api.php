@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\PricingController;
 use App\Http\Controllers\Api\AboutController;
+use App\Http\Controllers\Api\VisitorController;
 
 // Public routes (no authentication required)
 Route::post('/register', [AuthController::class, 'register']);
@@ -68,3 +69,9 @@ Route::get('/pricing', [PricingController::class, 'index']);
 Route::get('/pricing/popular', [PricingController::class, 'popular']);
 Route::get('/pricing/cycle/{cycle}', [PricingController::class, 'byCycle']);
 Route::get('/pricing/{slug}', [PricingController::class, 'show']);
+
+// Visitor Analytics API Routes
+Route::middleware('visitor.tracking')->group(function () {
+    Route::post('/track-visitor', [VisitorController::class, 'store']);
+    Route::post('/update-visitor-exit', [VisitorController::class, 'updateExit']);
+});

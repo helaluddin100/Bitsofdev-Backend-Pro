@@ -50,5 +50,6 @@ class Kernel extends HttpKernel
         'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
         'admin' => AdminMiddleware::class,
         'user' => UserMiddleware::class,
+        'visitor.tracking' => \App\Http\Middleware\VisitorTrackingMiddleware::class,
     ];
 }

@@ -1,288 +1,320 @@
-<!DOCTYPE html>
-<html lang="en">
+@extends('master.master')
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Control Dashboard - BitsOfDev Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
+@section('content')
+    <div class="page-content">
+        <nav class="page-breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('admin.ai-dashboard') }}">AI Chatbot</a></li>
+                <li class="breadcrumb-item active" aria-current="page">AI Control</li>
+            </ol>
+        </nav>
 
-<body class="bg-gray-100">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <header class="bg-white shadow-sm border-b">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-4">
-                    <div class="flex items-center">
-                        <i class="fas fa-robot text-2xl text-blue-600 mr-3"></i>
-                        <h1 class="text-2xl font-bold text-gray-900">AI Control Dashboard</h1>
-                    </div>
-                    <div class="text-sm text-gray-500">
-                        BitsOfDev Admin Panel
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Main Content -->
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Success/Error Messages -->
-            @if (session('success'))
-                <div class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                    <i class="fas fa-check-circle mr-2"></i>
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if (session('error'))
-                <div class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    <i class="fas fa-exclamation-circle mr-2"></i>
-                    {{ session('error') }}
-                </div>
-            @endif
-
-            <!-- AI Settings Card -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-                <h2 class="text-xl font-semibold text-gray-900 mb-6">
-                    <i class="fas fa-cog mr-2 text-blue-600"></i>
-                    AI System Settings
-                </h2>
-
-                <form method="POST" action="{{ route('admin.ai.update-settings') }}" class="space-y-6">
-                    @csrf
-
-                    <!-- AI Provider Selection -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                AI Provider
-                            </label>
-                            <select name="ai_provider"
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="gemini" {{ $settings->ai_provider == 'gemini' ? 'selected' : '' }}>
-                                    <i class="fas fa-robot mr-2"></i>Google Gemini
-                                </option>
-                                <option value="own_ai" {{ $settings->ai_provider == 'own_ai' ? 'selected' : '' }}>
-                                    <i class="fas fa-brain mr-2"></i>Own AI (Training Mode)
-                                </option>
-                                <option value="none" {{ $settings->ai_provider == 'none' ? 'selected' : '' }}>
-                                    <i class="fas fa-ban mr-2"></i>Disabled
-                                </option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Learning Threshold
-                            </label>
-                            <input type="number" name="learning_threshold" value="{{ $settings->learning_threshold }}"
-                                min="1" max="100"
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <p class="text-xs text-gray-500 mt-1">Minimum responses needed to activate own AI</p>
-                        </div>
-                    </div>
-
-                    <!-- Toggle Switches -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+        <!-- Page Header -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h3 class="text-sm font-medium text-gray-900">Training Mode</h3>
-                                <p class="text-xs text-gray-500">Use own AI instead of external AI</p>
+                                <h4 class="card-title mb-2">
+                                    <i data-feather="cpu" class="me-2"></i>
+                                    AI Control Dashboard
+                                </h4>
+                                <p class="text-muted">Manage your AI system settings and monitor learning progress.</p>
                             </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" name="training_mode" value="1"
-                                    {{ $settings->training_mode ? 'checked' : '' }} class="sr-only peer">
-                                <div
-                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
-                                </div>
-                            </label>
-                        </div>
-
-                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                            <div>
-                                <h3 class="text-sm font-medium text-gray-900">Static Responses</h3>
-                                <p class="text-xs text-gray-500">Enable pre-defined answers</p>
+                            <div class="text-end">
+                                <h6 class="text-muted">{{ now()->format('l, F j, Y') }}</h6>
+                                <p class="text-muted">{{ now()->format('g:i A') }}</p>
                             </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" name="use_static_responses" value="1"
-                                    {{ $settings->use_static_responses ? 'checked' : '' }} class="sr-only peer">
-                                <div
-                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        @if (session('success'))
+            <div class="row">
+                <div class="col-12">
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i data-feather="check-circle" class="me-2"></i>
+                        {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if (session('error'))
+            <div class="row">
+                <div class="col-12">
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i data-feather="alert-circle" class="me-2"></i>
+                        {{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <!-- AI Settings Card -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i data-feather="settings" class="me-2"></i>
+                            AI System Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ route('admin.ai.update-settings') }}">
+                            @csrf
+
+                            <div class="row">
+                                <!-- AI Provider Selection -->
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">AI Provider</label>
+                                    <select name="ai_provider" class="form-select">
+                                        <option value="gemini" {{ $settings->ai_provider == 'gemini' ? 'selected' : '' }}>
+                                            Google Gemini
+                                        </option>
+                                        <option value="own_ai" {{ $settings->ai_provider == 'own_ai' ? 'selected' : '' }}>
+                                            Own AI (Training Mode)
+                                        </option>
+                                        <option value="none" {{ $settings->ai_provider == 'none' ? 'selected' : '' }}>
+                                            Disabled
+                                        </option>
+                                    </select>
                                 </div>
-                            </label>
-                        </div>
-                    </div>
 
-                    <!-- Save Button -->
-                    <div class="flex justify-end">
-                        <button type="submit"
-                            class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <i class="fas fa-save mr-2"></i>
-                            Save Settings
-                        </button>
-                    </div>
-                </form>
-            </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Learning Threshold</label>
+                                    <input type="number" name="learning_threshold"
+                                        value="{{ $settings->learning_threshold }}" min="1" max="100"
+                                        class="form-control">
+                                    <small class="form-text text-muted">Minimum responses needed to activate own AI</small>
+                                </div>
+                            </div>
 
-            <!-- Quick Actions -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-                <h2 class="text-xl font-semibold text-gray-900 mb-6">
-                    <i class="fas fa-bolt mr-2 text-yellow-600"></i>
-                    Quick Actions
-                </h2>
+                            <!-- Toggle Switches -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="training_mode" value="1"
+                                            {{ $settings->training_mode ? 'checked' : '' }} id="trainingMode">
+                                        <label class="form-check-label" for="trainingMode">
+                                            <strong>Training Mode</strong>
+                                            <br><small class="text-muted">Use own AI instead of external AI</small>
+                                        </label>
+                                    </div>
+                                </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- Switch to Gemini -->
-                    <form method="POST" action="{{ route('admin.ai.switch-provider') }}" class="inline">
-                        @csrf
-                        <input type="hidden" name="provider" value="gemini">
-                        <button type="submit"
-                            class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <i class="fas fa-robot mr-2"></i>
-                            Switch to Gemini
-                        </button>
-                    </form>
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="use_static_responses"
+                                            value="1" {{ $settings->use_static_responses ? 'checked' : '' }}
+                                            id="staticResponses">
+                                        <label class="form-check-label" for="staticResponses">
+                                            <strong>Static Responses</strong>
+                                            <br><small class="text-muted">Enable pre-defined answers</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
 
-                    <!-- Switch to Own AI -->
-                    <form method="POST" action="{{ route('admin.ai.switch-provider') }}" class="inline">
-                        @csrf
-                        <input type="hidden" name="provider" value="own_ai">
-                        <button type="submit"
-                            class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
-                            <i class="fas fa-brain mr-2"></i>
-                            Switch to Own AI
-                        </button>
-                    </form>
-
-                    <!-- Activate Learned Responses -->
-                    <form method="POST" action="{{ route('admin.ai.activate-learned') }}" class="inline">
-                        @csrf
-                        <button type="submit"
-                            class="w-full bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500">
-                            <i class="fas fa-play mr-2"></i>
-                            Activate Learned ({{ $learningStats['pending_review'] }})
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Learning Statistics -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-                <h2 class="text-xl font-semibold text-gray-900 mb-6">
-                    <i class="fas fa-chart-line mr-2 text-green-600"></i>
-                    AI Learning Statistics
-                </h2>
-
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div class="text-center p-4 bg-blue-50 rounded-lg">
-                        <div class="text-3xl font-bold text-blue-600">{{ $learningStats['total_learned'] }}</div>
-                        <div class="text-sm text-gray-600">Total Learned</div>
-                    </div>
-                    <div class="text-center p-4 bg-green-50 rounded-lg">
-                        <div class="text-3xl font-bold text-green-600">{{ $learningStats['active_learned'] }}</div>
-                        <div class="text-sm text-gray-600">Active Responses</div>
-                    </div>
-                    <div class="text-center p-4 bg-yellow-50 rounded-lg">
-                        <div class="text-3xl font-bold text-yellow-600">{{ $learningStats['pending_review'] }}</div>
-                        <div class="text-sm text-gray-600">Pending Review</div>
-                    </div>
-                    <div class="text-center p-4 bg-purple-50 rounded-lg">
-                        <div class="text-3xl font-bold text-purple-600">{{ $learningStats['learning_progress'] }}%
-                        </div>
-                        <div class="text-sm text-gray-600">Learning Progress</div>
+                            <!-- Save Button -->
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i data-feather="save" class="me-2"></i>
+                                    Save Settings
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Progress Bar -->
-                <div class="mt-6">
-                    <div class="flex justify-between text-sm text-gray-600 mb-2">
-                        <span>AI Learning Progress</span>
-                        <span>{{ $learningStats['learning_progress'] }}%</span>
+        <!-- Quick Actions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i data-feather="zap" class="me-2"></i>
+                            Quick Actions
+                        </h5>
                     </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-purple-600 h-2 rounded-full"
-                            style="width: {{ $learningStats['learning_progress'] }}%"></div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Switch to Gemini -->
+                            <div class="col-md-4 mb-3">
+                                <form method="POST" action="{{ route('admin.ai.switch-provider') }}">
+                                    @csrf
+                                    <input type="hidden" name="provider" value="gemini">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i data-feather="cpu" class="me-2"></i>
+                                        Switch to Gemini
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Switch to Own AI -->
+                            <div class="col-md-4 mb-3">
+                                <form method="POST" action="{{ route('admin.ai.switch-provider') }}">
+                                    @csrf
+                                    <input type="hidden" name="provider" value="own_ai">
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i data-feather="brain" class="me-2"></i>
+                                        Switch to Own AI
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Activate Learned Responses -->
+                            <div class="col-md-4 mb-3">
+                                <form method="POST" action="{{ route('admin.ai.activate-learned') }}">
+                                    @csrf
+                                    <button type="submit" class="btn btn-warning w-100">
+                                        <i data-feather="play" class="me-2"></i>
+                                        Activate Learned ({{ $learningStats['pending_review'] }})
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
-                    @if ($learningStats['can_activate_own_ai'])
-                        <div class="mt-2 text-sm text-green-600">
-                            <i class="fas fa-check-circle mr-1"></i>
-                            Ready to activate own AI!
-                        </div>
-                    @else
-                        <div class="mt-2 text-sm text-gray-500">
-                            Need {{ $settings->learning_threshold - $learningStats['active_learned'] }} more responses
-                            to activate own AI
-                        </div>
-                    @endif
                 </div>
             </div>
+        </div>
 
-            <!-- Recent Learned Questions -->
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-xl font-semibold text-gray-900 mb-6">
-                    <i class="fas fa-history mr-2 text-gray-600"></i>
-                    Recent Learned Questions
-                </h2>
+        <!-- Learning Statistics -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i data-feather="trending-up" class="me-2"></i>
+                            AI Learning Statistics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-3 col-md-6 mb-3">
+                                <div class="card bg-primary text-white">
+                                    <div class="card-body text-center">
+                                        <h3 class="mb-0">{{ $learningStats['total_learned'] }}</h3>
+                                        <p class="mb-0">Total Learned</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6 mb-3">
+                                <div class="card bg-success text-white">
+                                    <div class="card-body text-center">
+                                        <h3 class="mb-0">{{ $learningStats['active_learned'] }}</h3>
+                                        <p class="mb-0">Active Responses</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6 mb-3">
+                                <div class="card bg-warning text-white">
+                                    <div class="card-body text-center">
+                                        <h3 class="mb-0">{{ $learningStats['pending_review'] }}</h3>
+                                        <p class="mb-0">Pending Review</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6 mb-3">
+                                <div class="card bg-info text-white">
+                                    <div class="card-body text-center">
+                                        <h3 class="mb-0">{{ $learningStats['learning_progress'] }}%</h3>
+                                        <p class="mb-0">Learning Progress</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                @if ($recentQuestions->count() > 0)
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Question</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Answer Preview</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Status</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Date</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                @foreach ($recentQuestions as $qa)
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ Str::limit($qa->question, 50) }}
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">
-                                            {{ Str::limit($qa->answer_1, 80) }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            @if ($qa->is_active)
-                                                <span
-                                                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                                    Active
-                                                </span>
-                                            @else
-                                                <span
-                                                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                                    Pending
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ $qa->created_at->format('M j, Y') }}
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                        <!-- Progress Bar -->
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>AI Learning Progress</span>
+                                <span>{{ $learningStats['learning_progress'] }}%</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-info" role="progressbar"
+                                    style="width: {{ $learningStats['learning_progress'] }}%"
+                                    aria-valuenow="{{ $learningStats['learning_progress'] }}" aria-valuemin="0"
+                                    aria-valuemax="100">
+                                </div>
+                            </div>
+                            @if ($learningStats['can_activate_own_ai'])
+                                <div class="mt-2 text-success">
+                                    <i data-feather="check-circle" class="me-1"></i>
+                                    Ready to activate own AI!
+                                </div>
+                            @else
+                                <div class="mt-2 text-muted">
+                                    Need {{ $settings->learning_threshold - $learningStats['active_learned'] }} more
+                                    responses to activate own AI
+                                </div>
+                            @endif
+                        </div>
                     </div>
-                @else
-                    <div class="text-center py-8 text-gray-500">
-                        <i class="fas fa-inbox text-4xl mb-4"></i>
-                        <p>No learned questions yet. Start using the chatbot to build your AI knowledge base!</p>
-                    </div>
-                @endif
+                </div>
             </div>
-        </main>
+        </div>
+
+        <!-- Recent Learned Questions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i data-feather="clock" class="me-2"></i>
+                            Recent Learned Questions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if ($recentQuestions->count() > 0)
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Question</th>
+                                            <th>Answer Preview</th>
+                                            <th>Status</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($recentQuestions as $qa)
+                                            <tr>
+                                                <td>{{ Str::limit($qa->question, 50) }}</td>
+                                                <td>{{ Str::limit($qa->answer_1, 80) }}</td>
+                                                <td>
+                                                    @if ($qa->is_active)
+                                                        <span class="badge bg-success">Active</span>
+                                                    @else
+                                                        <span class="badge bg-warning">Pending</span>
+                                                    @endif
+                                                </td>
+                                                <td>{{ $qa->created_at->format('M j, Y') }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="text-center py-4 text-muted">
+                                <i data-feather="inbox" class="mb-3" style="width: 48px; height: 48px;"></i>
+                                <p>No learned questions yet. Start using the chatbot to build your AI knowledge base!</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -291,6 +323,4 @@
             location.reload();
         }, 30000);
     </script>
-</body>
-
-</html>
+@endsection

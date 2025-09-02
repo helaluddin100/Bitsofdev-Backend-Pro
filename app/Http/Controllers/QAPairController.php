@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\QAPair;
 use App\Models\VisitorQuestion;
+use App\Models\ConversationSession;
+use App\Models\ConversationMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
@@ -166,6 +168,17 @@ class QAPairController extends Controller
             // Get AI settings
             $aiSettings = AISettings::getCurrent();
 
+            // Get or create conversation session
+            $sessionId = $request->input('sessionId') ?: ($request->hasSession() ? $request->session()->getId() : 'anonymous_' . $request->ip());
+            $conversationSession = ConversationSession::getOrCreateSession(
+                $sessionId,
+                $request->ip(),
+                $request->userAgent()
+            );
+
+            // Store visitor message
+            ConversationMessage::addMessage($sessionId, 'visitor', $request->question);
+
             // Store visitor question with error handling
             try {
                 $visitorQuestion = VisitorQuestion::create([
@@ -196,6 +209,9 @@ class QAPairController extends Controller
                             'admin_notes' => 'Quick answer provided'
                         ]);
                     }
+
+                    // Store quick answer in conversation history
+                    ConversationMessage::addMessage($sessionId, 'ai', $quickAnswer);
 
                     return response()->json([
                         'success' => true,
@@ -254,6 +270,9 @@ class QAPairController extends Controller
                         ]);
                     }
 
+                    // Store intelligent answer in conversation history
+                    ConversationMessage::addMessage($sessionId, 'ai', $intelligentAnswer);
+
                     return response()->json([
                         'success' => true,
                         'data' => [
@@ -266,7 +285,8 @@ class QAPairController extends Controller
                 }
 
                 // If no intelligent answer, try AI API based on settings
-                $aiAnswer = $this->getAIResponseFromAPI($userQuestion, $aiSettings);
+                $conversationHistory = $this->getConversationHistoryForContext($sessionId);
+                $aiAnswer = $this->getAIResponseFromAPI($userQuestion, $aiSettings, $conversationHistory);
 
                 if ($aiAnswer) {
                     // Store AI response in database for learning
@@ -279,6 +299,9 @@ class QAPairController extends Controller
                             'admin_notes' => 'Answered using AI API (ChatGPT/Gemini) - Stored for learning'
                         ]);
                     }
+
+                    // Store AI response in conversation history
+                    ConversationMessage::addMessage($sessionId, 'ai', $aiAnswer);
 
                     return response()->json([
                         'success' => true,
@@ -777,9 +800,38 @@ class QAPairController extends Controller
     }
 
     /**
+     * Get conversation history for context
+     */
+    private function getConversationHistoryForContext($sessionId, $limit = 5)
+    {
+        try {
+            $session = ConversationSession::where('session_id', $sessionId)->first();
+            if (!$session) {
+                return [];
+            }
+
+            $messages = $session->recentMessages($limit);
+            $history = [];
+
+            foreach ($messages as $message) {
+                $history[] = [
+                    'sender' => $message->sender,
+                    'message' => $message->message,
+                    'timestamp' => $message->created_at->format('H:i')
+                ];
+            }
+
+            return $history;
+        } catch (\Exception $e) {
+            Log::error('Error getting conversation history: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Get AI response from external API (ChatGPT/Gemini)
      */
-    private function getAIResponseFromAPI($question, $aiSettings = null)
+    private function getAIResponseFromAPI($question, $aiSettings = null, $conversationHistory = [])
     {
         try {
             // Use settings if provided, otherwise fall back to config
@@ -846,6 +898,16 @@ class QAPairController extends Controller
             - If user says 'thanks', 'thank you' - respond with 'You're welcome! Feel free to ask if you need anything else.'
             - If user says 'bye', 'goodbye' - respond with 'Goodbye! Have a great day!'
             - Don't provide service information for conversation acknowledgments";
+
+            // Add conversation history to context
+            if (!empty($conversationHistory)) {
+                $historyText = "\n\nConversation History:\n";
+                foreach ($conversationHistory as $msg) {
+                    $sender = $msg['sender'] === 'visitor' ? 'User' : 'Assistant';
+                    $historyText .= "{$sender}: {$msg['message']}\n";
+                }
+                $context .= $historyText;
+            }
 
             if ($apiProvider === 'openai') {
                 return $this->getOpenAIResponse($question, $context, $apiKey);
@@ -1105,6 +1167,91 @@ class QAPairController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error activating learned responses: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get conversation history for a session
+     */
+    public function getConversationHistory($sessionId)
+    {
+        try {
+            $session = ConversationSession::where('session_id', $sessionId)->first();
+
+            if (!$session) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'messages' => [],
+                        'session_info' => null
+                    ]
+                ]);
+            }
+
+            $messages = $session->messages()->orderBy('created_at')->get();
+            $formattedMessages = $messages->map(function ($message) {
+                return [
+                    'id' => $message->id,
+                    'sender' => $message->sender,
+                    'message' => $message->message,
+                    'timestamp' => $message->created_at->format('H:i:s'),
+                    'date' => $message->created_at->format('Y-m-d')
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'messages' => $formattedMessages,
+                    'session_info' => [
+                        'session_id' => $session->session_id,
+                        'message_count' => $session->message_count,
+                        'last_activity' => $session->last_activity,
+                        'created_at' => $session->created_at
+                    ]
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error getting conversation history: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Clear conversation history for a session
+     */
+    public function clearConversationHistory($sessionId)
+    {
+        try {
+            $session = ConversationSession::where('session_id', $sessionId)->first();
+
+            if (!$session) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Session not found'
+                ], 404);
+            }
+
+            // Delete all messages for this session
+            $session->messages()->delete();
+
+            // Reset session message count
+            $session->update([
+                'message_count' => 0,
+                'last_activity' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Conversation history cleared successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error clearing conversation history: ' . $e->getMessage()
             ], 500);
         }
     }

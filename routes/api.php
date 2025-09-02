@@ -96,6 +96,10 @@ Route::get('/chat/qa-pairs', [QAPairController::class, 'index']);
 Route::get('/ai/learning-stats', [QAPairController::class, 'getAILearningStats']);
 Route::post('/ai/activate-learned', [QAPairController::class, 'activateLearnedResponses']);
 
+// Conversation History Routes
+Route::get('/conversation/history/{sessionId}', [QAPairController::class, 'getConversationHistory']);
+Route::delete('/conversation/clear/{sessionId}', [QAPairController::class, 'clearConversationHistory']);
+
 
 // Admin Q&A Management Routes
 Route::middleware('auth:sanctum')->group(function () {

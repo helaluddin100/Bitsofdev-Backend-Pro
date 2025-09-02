@@ -124,16 +124,24 @@ Route::namespace('App\Http\Controllers')->group(function () {
         Route::delete('/qa-delete/{id}', [AdminController::class, 'deleteQA'])->name('qa-delete');
         Route::post('/qa-toggle/{id}', [AdminController::class, 'toggleStatus'])->name('qa-toggle');
         Route::post('/test-ai-response', [AdminController::class, 'testAIResponse'])->name('test-ai-response');
-        
+
         // Visitor Questions Management
         Route::get('/visitor-questions', [AdminController::class, 'visitorQuestions'])->name('visitor-questions');
         Route::post('/answer-visitor-question/{id}', [AdminController::class, 'answerVisitorQuestion'])->name('answer-visitor-question');
         Route::post('/mark-converted/{id}', [AdminController::class, 'markAsConverted'])->name('mark-converted');
         Route::get('/visitor-questions-stats', [AdminController::class, 'getVisitorQuestionsStats'])->name('visitor-questions-stats');
-        
+
         // Quick Answers Management
         Route::get('/quick-answers', [AdminController::class, 'quickAnswers'])->name('quick-answers');
         Route::get('/test-website-data', [AdminController::class, 'testWebsiteData'])->name('test-website-data');
+
+        // AI Control Dashboard
+        Route::get('/ai-control', [App\Http\Controllers\Admin\AIControlController::class, 'index'])->name('ai-control');
+        Route::post('/ai-control/update-settings', [App\Http\Controllers\Admin\AIControlController::class, 'updateSettings'])->name('ai.update-settings');
+        Route::post('/ai-control/switch-provider', [App\Http\Controllers\Admin\AIControlController::class, 'switchProvider'])->name('ai.switch-provider');
+        Route::post('/ai-control/toggle-training', [App\Http\Controllers\Admin\AIControlController::class, 'toggleTrainingMode'])->name('ai.toggle-training');
+        Route::post('/ai-control/toggle-static', [App\Http\Controllers\Admin\AIControlController::class, 'toggleStaticResponses'])->name('ai.toggle-static');
+        Route::post('/ai-control/activate-learned', [App\Http\Controllers\Admin\AIControlController::class, 'activateLearned'])->name('ai.activate-learned');
     });
 });
 

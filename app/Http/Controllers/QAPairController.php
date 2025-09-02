@@ -7,6 +7,7 @@ use App\Models\VisitorQuestion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use App\Models\AISettings;
 
 class QAPairController extends Controller
 {
@@ -162,6 +163,9 @@ class QAPairController extends Controller
 
             $userQuestion = strtolower(trim($request->question));
 
+            // Get AI settings
+            $aiSettings = AISettings::getCurrent();
+
             // Store visitor question with error handling
             try {
                 $visitorQuestion = VisitorQuestion::create([
@@ -181,8 +185,8 @@ class QAPairController extends Controller
             $userQuestionLower = strtolower($userQuestion);
             $isCustomerNeed = (strpos($userQuestionLower, 'i need') !== false || strpos($userQuestionLower, 'i want') !== false) && strpos($userQuestionLower, 'website') !== false;
 
-            // Check for quick answers only if not a customer need
-            if (!$isCustomerNeed) {
+            // Check for quick answers only if not a customer need AND static responses are enabled
+            if (!$isCustomerNeed && $aiSettings->use_static_responses) {
                 $quickAnswer = $this->getQuickAnswer($userQuestion);
                 if ($quickAnswer) {
                     if ($visitorQuestion) {
@@ -209,13 +213,28 @@ class QAPairController extends Controller
 
             // Find matching Q&A pair with timeout protection (skip if customer need detected)
             $qaPair = null;
-            if (!$isCustomerNeed) {
+            if (!$isCustomerNeed && $aiSettings->use_static_responses) {
                 try {
                     $qaPair = QAPair::where('is_active', true)
                         ->get()
                         ->first(function ($qa) use ($userQuestion) {
                             $question = strtolower(trim($qa->question));
-                            return str_contains($userQuestion, $question) || str_contains($question, $userQuestion);
+                            $userQuestion = strtolower(trim($userQuestion));
+
+                            // Use more strict matching - require significant overlap
+                            $questionWords = explode(' ', $question);
+                            $userWords = explode(' ', $userQuestion);
+
+                            // If question is very short (1-2 words), require exact match
+                            if (count($questionWords) <= 2) {
+                                return $question === $userQuestion;
+                            }
+
+                            // For longer questions, require at least 70% word overlap
+                            $commonWords = array_intersect($questionWords, $userWords);
+                            $overlapPercentage = count($commonWords) / count($questionWords);
+
+                            return $overlapPercentage >= 0.7;
                         });
                 } catch (\Exception $e) {
                     Log::warning('Error searching Q&A pairs: ' . $e->getMessage());
@@ -246,8 +265,8 @@ class QAPairController extends Controller
                     ]);
                 }
 
-                // If no intelligent answer, try AI API (ChatGPT/Gemini)
-                $aiAnswer = $this->getAIResponseFromAPI($userQuestion);
+                // If no intelligent answer, try AI API based on settings
+                $aiAnswer = $this->getAIResponseFromAPI($userQuestion, $aiSettings);
 
                 if ($aiAnswer) {
                     // Store AI response in database for learning
@@ -364,8 +383,11 @@ class QAPairController extends Controller
      */
     private function getQuickAnswer($question)
     {
+        $question = strtolower(trim($question));
+
         // Only keep essential time/date and conversation responses for AI learning
         $essentialAnswers = [
+            // Exact time/date matches only
             'date' => 'Today is ' . now()->format('l, F j, Y'),
             'time' => 'Current time is ' . now()->format('g:i A'),
             'today' => 'Today is ' . now()->format('l, F j, Y'),
@@ -374,7 +396,7 @@ class QAPairController extends Controller
             'current date' => 'Today is ' . now()->format('l, F j, Y'),
             'current time' => 'Current time is ' . now()->format('g:i A'),
 
-            // Conversation acknowledgments
+            // Exact conversation acknowledgments only
             'okay' => 'Great! Is there anything else I can help you with?',
             'ok' => 'Perfect! Let me know if you need any other information.',
             'alright' => 'Excellent! Feel free to ask if you have more questions.',
@@ -386,8 +408,13 @@ class QAPairController extends Controller
             'goodbye' => 'Take care! Feel free to come back anytime.',
         ];
 
+        // Use exact word matching instead of partial matching
         foreach ($essentialAnswers as $keyword => $answer) {
-            if (str_contains($question, $keyword)) {
+            // Check for exact word match (not partial)
+            if (
+                $question === $keyword ||
+                preg_match('/\b' . preg_quote($keyword, '/') . '\b/', $question)
+            ) {
                 return $answer;
             }
         }
@@ -660,9 +687,14 @@ class QAPairController extends Controller
     {
         $question = strtolower($question);
 
-        // Priority check for customer website needs (override database)
+        // Priority check for customer needs (override database)
         if ((strpos($question, 'i need') !== false || strpos($question, 'i want') !== false) && strpos($question, 'website') !== false) {
             return "Excellent! We'd love to help you create your website. To understand your specific requirements and provide the best solution, please contact our team. We can discuss your goals, features, design preferences, and budget. Visit our contact page to get started with a free consultation!";
+        }
+
+        // Priority check for mobile app customer needs
+        if ((strpos($question, 'i need') !== false || strpos($question, 'i want') !== false) && (strpos($question, 'mobile') !== false || strpos($question, 'app') !== false)) {
+            return "Excellent! We'd love to help you create your mobile app. To understand your specific requirements and provide the best solution, please contact our team. We can discuss your app goals, features, platform preferences (iOS/Android), and budget. Visit our contact page to get started with a free consultation!";
         }
 
         // Company information questions
@@ -747,16 +779,30 @@ class QAPairController extends Controller
     /**
      * Get AI response from external API (ChatGPT/Gemini)
      */
-    private function getAIResponseFromAPI($question)
+    private function getAIResponseFromAPI($question, $aiSettings = null)
     {
         try {
-            // Get API configuration
-            $apiProvider = config('app.ai_provider', 'openai'); // openai, gemini, or none
-            $apiKey = config('app.ai_api_key');
+            // Use settings if provided, otherwise fall back to config
+            if ($aiSettings) {
+                $apiProvider = $aiSettings->ai_provider;
+                $apiKey = config('app.ai_api_key');
+            } else {
+                $apiProvider = config('app.ai_provider', 'gemini');
+                $apiKey = config('app.ai_api_key');
+            }
 
             if (!$apiKey || $apiProvider === 'none') {
                 Log::info('AI API not configured, skipping external AI call');
                 return null;
+            }
+
+            // Check if training mode is enabled and we have enough learned responses
+            if ($aiSettings && $aiSettings->training_mode) {
+                $activeLearned = QAPair::where('category', 'ai_learned')->where('is_active', true)->count();
+                if ($activeLearned >= $aiSettings->learning_threshold) {
+                    Log::info('Training mode enabled with sufficient learned responses, using own AI');
+                    return $this->getOwnAIResponse($question);
+                }
             }
 
             // Create enhanced context for the AI
@@ -810,6 +856,44 @@ class QAPairController extends Controller
             return null;
         } catch (\Exception $e) {
             Log::error('Error getting AI response from API: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Get response from own AI (learned responses)
+     */
+    private function getOwnAIResponse($question)
+    {
+        try {
+            // Find best matching learned response
+            $learnedResponse = QAPair::where('category', 'ai_learned')
+                ->where('is_active', true)
+                ->get()
+                ->first(function ($qa) use ($question) {
+                    $questionLower = strtolower(trim($question));
+                    $qaQuestion = strtolower(trim($qa->question));
+
+                    // Calculate similarity
+                    $questionWords = explode(' ', $questionLower);
+                    $qaWords = explode(' ', $qaQuestion);
+
+                    $commonWords = array_intersect($questionWords, $qaWords);
+                    $similarity = count($commonWords) / max(count($questionWords), count($qaWords));
+
+                    return $similarity >= 0.3; // 30% similarity threshold
+                });
+
+            if ($learnedResponse) {
+                Log::info('Using own AI response for question: ' . $question);
+                return $learnedResponse->answer_1;
+            }
+
+            // If no learned response found, fall back to external AI
+            Log::info('No learned response found, falling back to external AI');
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Error getting own AI response: ' . $e->getMessage());
             return null;
         }
     }

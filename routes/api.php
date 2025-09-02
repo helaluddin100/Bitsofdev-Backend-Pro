@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\PricingController;
 use App\Http\Controllers\Api\AboutController;
 use App\Http\Controllers\Api\VisitorController;
 use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\QAPairController;
 
 // Public routes (no authentication required)
 Route::post('/register', [AuthController::class, 'register']);
@@ -85,4 +86,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/admin/contacts/{contact}', [ContactController::class, 'update']);
     Route::delete('/admin/contacts/{contact}', [ContactController::class, 'destroy']);
     Route::get('/admin/contacts/statistics', [ContactController::class, 'statistics']);
+});
+
+// AI Chatbot API Routes
+Route::post('/chat/ai-response', [QAPairController::class, 'getAIResponse']);
+Route::get('/chat/qa-pairs', [QAPairController::class, 'index']);
+
+// Admin Q&A Management Routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('admin/qa-pairs', QAPairController::class);
+    Route::get('/admin/qa-pairs/statistics', [QAPairController::class, 'statistics']);
 });

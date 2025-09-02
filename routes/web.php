@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AboutController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\VisitorDataController;
 use App\Http\Controllers\Admin\ContactController;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Artisan;
@@ -112,6 +113,23 @@ Route::namespace('App\Http\Controllers')->group(function () {
         // Contact Management
         Route::resource('contacts', ContactController::class);
         Route::get('contacts/export', [ContactController::class, 'export'])->name('contacts.export');
+    });
+
+    // AI Chatbot Admin Routes
+    Route::group(['as' => 'admin.', 'prefix' => 'admin', 'middleware' => ['auth', 'admin']], function () {
+        Route::get('/ai-dashboard', [AdminController::class, 'dashboard'])->name('ai-dashboard');
+        Route::get('/qa-management', [AdminController::class, 'qaManagement'])->name('qa-management');
+        Route::post('/qa-store', [AdminController::class, 'storeQA'])->name('qa-store');
+        Route::post('/qa-update/{id}', [AdminController::class, 'updateQA'])->name('qa-update');
+        Route::delete('/qa-delete/{id}', [AdminController::class, 'deleteQA'])->name('qa-delete');
+        Route::post('/qa-toggle/{id}', [AdminController::class, 'toggleStatus'])->name('qa-toggle');
+        Route::post('/test-ai-response', [AdminController::class, 'testAIResponse'])->name('test-ai-response');
+        
+        // Visitor Questions Management
+        Route::get('/visitor-questions', [AdminController::class, 'visitorQuestions'])->name('visitor-questions');
+        Route::post('/answer-visitor-question/{id}', [AdminController::class, 'answerVisitorQuestion'])->name('answer-visitor-question');
+        Route::post('/mark-converted/{id}', [AdminController::class, 'markAsConverted'])->name('mark-converted');
+        Route::get('/visitor-questions-stats', [AdminController::class, 'getVisitorQuestionsStats'])->name('visitor-questions-stats');
     });
 });
 

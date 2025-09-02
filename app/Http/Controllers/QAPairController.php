@@ -258,30 +258,32 @@ class QAPairController extends Controller
             }
 
             if (!$qaPair) {
-                // Try to generate intelligent answer from website content
-                $intelligentAnswer = $this->generateAnswerFromWebsiteData($userQuestion);
+                // Try to generate intelligent answer from website content (only if static responses are enabled)
+                if ($aiSettings->use_static_responses) {
+                    $intelligentAnswer = $this->generateAnswerFromWebsiteData($userQuestion);
 
-                if ($intelligentAnswer) {
-                    // Update visitor question with intelligent answer
-                    if ($visitorQuestion) {
-                        $visitorQuestion->update([
-                            'status' => 'answered',
-                            'admin_notes' => 'Answered using intelligent content analysis'
+                    if ($intelligentAnswer) {
+                        // Update visitor question with intelligent answer
+                        if ($visitorQuestion) {
+                            $visitorQuestion->update([
+                                'status' => 'answered',
+                                'admin_notes' => 'Answered using intelligent content analysis'
+                            ]);
+                        }
+
+                        // Store intelligent answer in conversation history
+                        ConversationMessage::addMessage($sessionId, 'ai', $intelligentAnswer);
+
+                        return response()->json([
+                            'success' => true,
+                            'data' => [
+                                'question' => $userQuestion,
+                                'response' => $intelligentAnswer,
+                                'type' => 'intelligent_answer',
+                                'visitor_question_id' => $visitorQuestion ? $visitorQuestion->id : null
+                            ]
                         ]);
                     }
-
-                    // Store intelligent answer in conversation history
-                    ConversationMessage::addMessage($sessionId, 'ai', $intelligentAnswer);
-
-                    return response()->json([
-                        'success' => true,
-                        'data' => [
-                            'question' => $userQuestion,
-                            'response' => $intelligentAnswer,
-                            'type' => 'intelligent_answer',
-                            'visitor_question_id' => $visitorQuestion ? $visitorQuestion->id : null
-                        ]
-                    ]);
                 }
 
                 // If no intelligent answer, try AI API based on settings

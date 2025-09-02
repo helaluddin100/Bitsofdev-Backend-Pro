@@ -219,4 +219,16 @@ return [
 
     ])->toArray(),
 
+    /*
+    |--------------------------------------------------------------------------
+    | AI API Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for external AI APIs (ChatGPT, Gemini, etc.)
+    |
+    */
+
+    'ai_provider' => env('AI_PROVIDER', 'none'), // openai, gemini, or none
+    'ai_api_key' => env('AI_API_KEY', ''),
+
 ];

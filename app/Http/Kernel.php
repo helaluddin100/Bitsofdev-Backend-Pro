@@ -31,10 +31,9 @@ class Kernel extends HttpKernel
 
         'api' => [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \Illuminate\Session\Middleware\StartSession::class,
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \Illuminate\Session\Middleware\StartSession::class,
-
         ],
     ];
 
@@ -50,5 +49,7 @@ class Kernel extends HttpKernel
         'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
         'admin' => AdminMiddleware::class,
         'user' => UserMiddleware::class,
+        'visitor.tracking' => \App\Http\Middleware\VisitorTrackingMiddleware::class,
+        'prevent.infinite.loop' => \App\Http\Middleware\PreventInfiniteLoop::class,
     ];
 }

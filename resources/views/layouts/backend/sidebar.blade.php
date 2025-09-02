@@ -23,8 +23,8 @@
 
             <!-- Blog Management -->
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#blog-management" role="button" aria-expanded="false"
-                    aria-controls="blog-management">
+                <a class="nav-link" data-bs-toggle="collapse" href="#blog-management" role="button"
+                    aria-expanded="false" aria-controls="blog-management">
                     <i class="link-icon" data-feather="file-text"></i>
                     <span class="link-title">Blog Management</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
@@ -46,8 +46,8 @@
 
             <!-- Project Management -->
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#project-management" role="button" aria-expanded="false"
-                    aria-controls="project-management">
+                <a class="nav-link" data-bs-toggle="collapse" href="#project-management" role="button"
+                    aria-expanded="false" aria-controls="project-management">
                     <i class="link-icon" data-feather="briefcase"></i>
                     <span class="link-title">Project Management</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
@@ -66,8 +66,8 @@
 
             <!-- Team Management -->
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#team-management" role="button" aria-expanded="false"
-                    aria-controls="team-management">
+                <a class="nav-link" data-bs-toggle="collapse" href="#team-management" role="button"
+                    aria-expanded="false" aria-controls="team-management">
                     <i class="link-icon" data-feather="users"></i>
                     <span class="link-title">Team Management</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
@@ -86,8 +86,8 @@
 
             <!-- Pricing Management -->
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#pricing-management" role="button" aria-expanded="false"
-                    aria-controls="pricing-management">
+                <a class="nav-link" data-bs-toggle="collapse" href="#pricing-management" role="button"
+                    aria-expanded="false" aria-controls="pricing-management">
                     <i class="link-icon" data-feather="dollar-sign"></i>
                     <span class="link-title">Pricing Management</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
@@ -106,8 +106,8 @@
 
             <!-- About Management -->
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#about-management" role="button" aria-expanded="false"
-                    aria-controls="about-management">
+                <a class="nav-link" data-bs-toggle="collapse" href="#about-management" role="button"
+                    aria-expanded="false" aria-controls="about-management">
                     <i class="link-icon" data-feather="info"></i>
                     <span class="link-title">About Management</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
@@ -124,12 +124,68 @@
                 </div>
             </li>
 
+            <!-- Analytics -->
+            <li class="nav-item">
+                <a href="{{ route('admin.analytics.index') }}" class="nav-link">
+                    <i class="link-icon" data-feather="bar-chart-2"></i>
+                    <span class="link-title">Analytics</span>
+                </a>
+            </li>
+
+            <!-- Visitor Data -->
+            <li class="nav-item">
+                <a href="{{ route('admin.visitors.index') }}" class="nav-link">
+                    <i class="link-icon" data-feather="users"></i>
+                    <span class="link-title">Visitor Data</span>
+                </a>
+            </li>
+
+            <!-- Contact Management -->
+            <li class="nav-item">
+                <a href="{{ route('admin.contacts.index') }}" class="nav-link">
+                    <i class="link-icon" data-feather="mail"></i>
+                    <span class="link-title">Contact Management</span>
+                </a>
+            </li>
+
+            <!-- AI Chatbot Management -->
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="collapse" href="#ai-chatbot-management" role="button"
+                    aria-expanded="false" aria-controls="ai-chatbot-management">
+                    <i class="link-icon" data-feather="message-circle"></i>
+                    <span class="link-title">AI Chatbot</span>
+                    <i class="link-arrow" data-feather="chevron-down"></i>
+                </a>
+                <div class="collapse" id="ai-chatbot-management">
+                    <ul class="nav sub-menu">
+                        <li class="nav-item">
+                            <a href="{{ route('admin.ai-dashboard') }}" class="nav-link">AI Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.ai-control') }}" class="nav-link">
+                                <i class="link-icon" data-feather="cpu"></i>
+                                <span class="link-title">AI Control</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.qa-management') }}" class="nav-link">Q&A Management</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.visitor-questions') }}" class="nav-link">Visitor Questions</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.quick-answers') }}" class="nav-link">Quick Answers</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
             <li class="nav-item nav-category">System</li>
 
             <!-- User Management -->
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#user-management" role="button" aria-expanded="false"
-                    aria-controls="user-management">
+                <a class="nav-link" data-bs-toggle="collapse" href="#user-management" role="button"
+                    aria-expanded="false" aria-controls="user-management">
                     <i class="link-icon" data-feather="user"></i>
                     <span class="link-title">User Management</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>

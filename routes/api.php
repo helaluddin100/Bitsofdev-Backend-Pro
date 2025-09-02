@@ -11,6 +11,9 @@ use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\PricingController;
 use App\Http\Controllers\Api\AboutController;
+use App\Http\Controllers\Api\VisitorController;
+use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\QAPairController;
 
 // Public routes (no authentication required)
 Route::post('/register', [AuthController::class, 'register']);
@@ -68,3 +71,38 @@ Route::get('/pricing', [PricingController::class, 'index']);
 Route::get('/pricing/popular', [PricingController::class, 'popular']);
 Route::get('/pricing/cycle/{cycle}', [PricingController::class, 'byCycle']);
 Route::get('/pricing/{slug}', [PricingController::class, 'show']);
+
+// Visitor Analytics API Routes
+Route::middleware('visitor.tracking')->group(function () {
+    Route::post('/track-visitor', [VisitorController::class, 'store']);
+    Route::post('/update-visitor-exit', [VisitorController::class, 'updateExit']);
+});
+
+// Contact Form API Routes
+Route::post('/contact', [ContactController::class, 'store']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/admin/contacts', [ContactController::class, 'index']);
+    Route::get('/admin/contacts/{contact}', [ContactController::class, 'show']);
+    Route::put('/admin/contacts/{contact}', [ContactController::class, 'update']);
+    Route::delete('/admin/contacts/{contact}', [ContactController::class, 'destroy']);
+    Route::get('/admin/contacts/statistics', [ContactController::class, 'statistics']);
+});
+
+// AI Chatbot API Routes
+Route::post('/chat/ai-response', [QAPairController::class, 'getAIResponse']);
+Route::get('/chat/qa-pairs', [QAPairController::class, 'index']);
+
+// AI Learning Routes
+Route::get('/ai/learning-stats', [QAPairController::class, 'getAILearningStats']);
+Route::post('/ai/activate-learned', [QAPairController::class, 'activateLearnedResponses']);
+
+// Conversation History Routes
+Route::get('/conversation/history/{sessionId}', [QAPairController::class, 'getConversationHistory']);
+Route::delete('/conversation/clear/{sessionId}', [QAPairController::class, 'clearConversationHistory']);
+
+
+// Admin Q&A Management Routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('admin/qa-pairs', QAPairController::class);
+    Route::get('/admin/qa-pairs/statistics', [QAPairController::class, 'statistics']);
+});

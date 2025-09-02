@@ -9,6 +9,10 @@ use App\Http\Controllers\Admin\ProjectController;
 use App\Http\Controllers\Admin\TeamController;
 use App\Http\Controllers\Admin\PricingController;
 use App\Http\Controllers\Admin\AboutController;
+use App\Http\Controllers\Admin\AnalyticsController;
+use App\Http\Controllers\Admin\VisitorDataController;
+use App\Http\Controllers\Admin\ContactController;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Artisan;
@@ -90,6 +94,54 @@ Route::namespace('App\Http\Controllers')->group(function () {
         Route::post('about/processes', [AboutController::class, 'storeProcess'])->name('about.processes.store');
         Route::post('about/processes/{process}', [AboutController::class, 'updateProcess'])->name('about.processes.update');
         Route::delete('about/processes/{process}', [AboutController::class, 'destroyProcess'])->name('about.processes.destroy');
+
+        // Analytics Management
+        Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+        Route::get('analytics/data', [AnalyticsController::class, 'getData'])->name('analytics.data');
+        Route::get('analytics/export', [AnalyticsController::class, 'export'])->name('analytics.export');
+        Route::get('analytics/test', function () {
+            return view('admin.analytics.test');
+        })->name('analytics.test');
+
+        // Visitor Data Management
+        Route::get('visitors', [VisitorDataController::class, 'index'])->name('visitors.index');
+        Route::get('visitors/{visitor}', [VisitorDataController::class, 'show'])->name('visitors.show');
+        Route::delete('visitors/{visitor}', [VisitorDataController::class, 'destroy'])->name('visitors.destroy');
+        Route::post('visitors/bulk-delete', [VisitorDataController::class, 'bulkDelete'])->name('visitors.bulk-delete');
+        Route::get('visitors/export', [VisitorDataController::class, 'export'])->name('visitors.export');
+
+        // Contact Management
+        Route::resource('contacts', ContactController::class);
+        Route::get('contacts/export', [ContactController::class, 'export'])->name('contacts.export');
+    });
+
+    // AI Chatbot Admin Routes
+    Route::group(['as' => 'admin.', 'prefix' => 'admin', 'middleware' => ['auth', 'admin']], function () {
+        Route::get('/ai-dashboard', [AdminController::class, 'dashboard'])->name('ai-dashboard');
+        Route::get('/qa-management', [AdminController::class, 'qaManagement'])->name('qa-management');
+        Route::post('/qa-store', [AdminController::class, 'storeQA'])->name('qa-store');
+        Route::post('/qa-update/{id}', [AdminController::class, 'updateQA'])->name('qa-update');
+        Route::delete('/qa-delete/{id}', [AdminController::class, 'deleteQA'])->name('qa-delete');
+        Route::post('/qa-toggle/{id}', [AdminController::class, 'toggleStatus'])->name('qa-toggle');
+        Route::post('/test-ai-response', [AdminController::class, 'testAIResponse'])->name('test-ai-response');
+
+        // Visitor Questions Management
+        Route::get('/visitor-questions', [AdminController::class, 'visitorQuestions'])->name('visitor-questions');
+        Route::post('/answer-visitor-question/{id}', [AdminController::class, 'answerVisitorQuestion'])->name('answer-visitor-question');
+        Route::post('/mark-converted/{id}', [AdminController::class, 'markAsConverted'])->name('mark-converted');
+        Route::get('/visitor-questions-stats', [AdminController::class, 'getVisitorQuestionsStats'])->name('visitor-questions-stats');
+
+        // Quick Answers Management
+        Route::get('/quick-answers', [AdminController::class, 'quickAnswers'])->name('quick-answers');
+        Route::get('/test-website-data', [AdminController::class, 'testWebsiteData'])->name('test-website-data');
+
+        // AI Control Dashboard
+        Route::get('/ai-control', [App\Http\Controllers\Admin\AIControlController::class, 'index'])->name('ai-control');
+        Route::post('/ai-control/update-settings', [App\Http\Controllers\Admin\AIControlController::class, 'updateSettings'])->name('ai.update-settings');
+        Route::post('/ai-control/switch-provider', [App\Http\Controllers\Admin\AIControlController::class, 'switchProvider'])->name('ai.switch-provider');
+        Route::post('/ai-control/toggle-training', [App\Http\Controllers\Admin\AIControlController::class, 'toggleTrainingMode'])->name('ai.toggle-training');
+        Route::post('/ai-control/toggle-static', [App\Http\Controllers\Admin\AIControlController::class, 'toggleStaticResponses'])->name('ai.toggle-static');
+        Route::post('/ai-control/activate-learned', [App\Http\Controllers\Admin\AIControlController::class, 'activateLearned'])->name('ai.activate-learned');
     });
 });
 

@@ -219,4 +219,18 @@ return [
 
     ])->toArray(),
 
+    /*
+    |--------------------------------------------------------------------------
+    | AI API Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for external AI APIs (ChatGPT, Gemini, etc.)
+    |
+    */
+
+    'ai_provider' => env('AI_PROVIDER', 'gemini'), // gemini, own_ai, or none
+    'ai_api_key' => env('AI_API_KEY', ''),
+    'ai_training_mode' => env('AI_TRAINING_MODE', false), // true = use own AI, false = use external AI
+    'ai_learning_threshold' => env('AI_LEARNING_THRESHOLD', 10), // minimum responses needed to activate own AI
+
 ];

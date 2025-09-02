@@ -130,6 +130,10 @@ Route::namespace('App\Http\Controllers')->group(function () {
         Route::post('/answer-visitor-question/{id}', [AdminController::class, 'answerVisitorQuestion'])->name('answer-visitor-question');
         Route::post('/mark-converted/{id}', [AdminController::class, 'markAsConverted'])->name('mark-converted');
         Route::get('/visitor-questions-stats', [AdminController::class, 'getVisitorQuestionsStats'])->name('visitor-questions-stats');
+        
+        // Quick Answers Management
+        Route::get('/quick-answers', [AdminController::class, 'quickAnswers'])->name('quick-answers');
+        Route::get('/test-website-data', [AdminController::class, 'testWebsiteData'])->name('test-website-data');
     });
 });
 

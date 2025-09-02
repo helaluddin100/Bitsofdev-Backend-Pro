@@ -152,10 +152,14 @@ class AdminController extends Controller
             });
 
         if (!$qaPair) {
+            // Generate contact suggestion
+            $contactSuggestion = $this->generateContactSuggestion($question);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'No matching answer found for your question',
-                'suggestion' => 'Please try rephrasing your question or add this question to your Q&A database.'
+                'suggestion' => $contactSuggestion,
+                'contact_link' => config('app.url') . '/contact'
             ], 404);
         }
 
@@ -298,5 +302,117 @@ class AdminController extends Controller
         ];
 
         return response()->json($stats);
+    }
+
+    /**
+     * Show quick answers management page
+     */
+    public function quickAnswers()
+    {
+        $quickAnswers = [
+            'date' => 'Today is ' . now()->format('l, F j, Y'),
+            'time' => 'Current time is ' . now()->format('g:i A'),
+            'today' => 'Today is ' . now()->format('l, F j, Y'),
+            'aj koto tarik' => 'আজ ' . now()->format('j F, Y') . ' তারিখ',
+            'aj ki tarik' => 'আজ ' . now()->format('j F, Y') . ' তারিখ',
+            'current date' => 'Today is ' . now()->format('l, F j, Y'),
+            'current time' => 'Current time is ' . now()->format('g:i A'),
+            'hello' => 'Hello! How can I help you today?',
+            'hi' => 'Hi there! What can I do for you?',
+            'good morning' => 'Good morning! How can I assist you?',
+            'good afternoon' => 'Good afternoon! What can I help you with?',
+            'good evening' => 'Good evening! How may I help you?',
+            'assalamu alaikum' => 'Wa Alaikum Assalam! How can I help you?',
+            'salam' => 'Wa Alaikum Assalam! What can I do for you?',
+            'company name' => 'We are BitsOfDev - a leading web development company.',
+            'who are you' => 'I am the AI assistant for BitsOfDev. I can help you with information about our services, projects, and more.',
+            'what is bitsofdev' => 'BitsOfDev is a professional web development company specializing in modern web technologies and digital solutions.',
+            'contact' => 'You can contact us through our contact form on the website or reach out to us directly.',
+            'phone' => 'For phone inquiries, please check our contact page for the latest contact information.',
+            'email' => 'You can reach us via email through our contact form on the website.',
+            'website' => 'You are currently on the BitsOfDev website. We offer web development, mobile app development, and digital solutions.',
+            'services' => 'We offer web development, mobile app development, UI/UX design, and digital consultation services.',
+        ];
+
+        return view('admin.quick-answers', compact('quickAnswers'));
+    }
+
+    /**
+     * Test website data integration
+     */
+    public function testWebsiteData()
+    {
+        try {
+            $baseUrl = config('app.url');
+            
+            $data = [
+                'blogs' => $this->fetchApiData($baseUrl . '/api/blogs'),
+                'projects' => $this->fetchApiData($baseUrl . '/api/projects'),
+                'team' => $this->fetchApiData($baseUrl . '/api/team'),
+                'about' => $this->fetchApiData($baseUrl . '/api/about'),
+                'pricing' => $this->fetchApiData($baseUrl . '/api/pricing'),
+            ];
+            
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+                'message' => 'Website data fetched successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching website data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Fetch data from API
+     */
+    private function fetchApiData($url)
+    {
+        try {
+            $response = file_get_contents($url);
+            $data = json_decode($response, true);
+            return $data['data'] ?? [];
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Generate contact suggestion based on question type
+     */
+    private function generateContactSuggestion($question)
+    {
+        $questionLower = strtolower($question);
+        
+        // Check question type and generate appropriate suggestion
+        if (str_contains($questionLower, 'price') || str_contains($questionLower, 'cost') || str_contains($questionLower, 'quote')) {
+            return "I don't have specific pricing information for your request. For a detailed quote and pricing information, please contact our team directly. We'd be happy to discuss your project requirements and provide you with a customized proposal. You can reach us through our contact page or call us directly.";
+        }
+        
+        if (str_contains($questionLower, 'project') || str_contains($questionLower, 'development') || str_contains($questionLower, 'website')) {
+            return "I'd love to help you with your project details, but I need more specific information to provide you with the best answer. Our development team can discuss your project requirements in detail. Please contact us through our contact page, and we'll schedule a consultation to understand your needs better.";
+        }
+        
+        if (str_contains($questionLower, 'support') || str_contains($questionLower, 'help') || str_contains($questionLower, 'issue')) {
+            return "I'm sorry I couldn't find the specific information you're looking for. Our support team is here to help you with any questions or issues you might have. Please contact us through our contact page, and we'll get back to you as soon as possible.";
+        }
+        
+        if (str_contains($questionLower, 'service') || str_contains($questionLower, 'offer')) {
+            return "While I can provide general information about our services, I'd recommend speaking directly with our team for detailed service information tailored to your specific needs. Please contact us through our contact page, and we'll be happy to discuss how we can help you.";
+        }
+        
+        if (str_contains($questionLower, 'time') || str_contains($questionLower, 'duration') || str_contains($questionLower, 'when')) {
+            return "Project timelines vary depending on the scope and complexity of your requirements. For accurate timeline estimates, our team would need to understand your specific project details. Please contact us through our contact page, and we'll provide you with a detailed project timeline.";
+        }
+        
+        if (str_contains($questionLower, 'technology') || str_contains($questionLower, 'tech') || str_contains($questionLower, 'framework')) {
+            return "We work with various modern technologies and frameworks. To recommend the best technology stack for your project, we'd need to understand your specific requirements and goals. Please contact us through our contact page, and our technical team will provide you with expert recommendations.";
+        }
+        
+        // Default contact suggestion
+        return "I apologize, but I couldn't find a specific answer to your question in our knowledge base. Our team of experts would be happy to help you with this. Please contact us through our contact page, and we'll get back to you with a detailed response. You can also call us directly for immediate assistance.";
     }
 }

@@ -167,6 +167,9 @@
                     <li class="nav-item">
                         <a href="{{ route('admin.visitor-questions') }}" class="nav-link">Visitor Questions</a>
                     </li>
+                    <li class="nav-item">
+                        <a href="{{ route('admin.quick-answers') }}" class="nav-link">Quick Answers</a>
+                    </li>
                 </ul>
             </div>
         </li>

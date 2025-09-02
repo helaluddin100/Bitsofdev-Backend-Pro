@@ -123,6 +123,16 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Contact Suggestions Info -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <h6><i class="mdi mdi-information"></i> Smart Contact Suggestions</h6>
+                                <p class="mb-0">When AI can't find an answer, it automatically provides intelligent contact suggestions based on the question type (pricing, project, support, etc.) and includes a direct link to your contact page.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

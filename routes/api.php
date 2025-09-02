@@ -92,6 +92,10 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::post('/chat/ai-response', [QAPairController::class, 'getAIResponse']);
 Route::get('/chat/qa-pairs', [QAPairController::class, 'index']);
 
+// AI Learning Routes
+Route::get('/ai/learning-stats', [QAPairController::class, 'getAILearningStats']);
+Route::post('/ai/activate-learned', [QAPairController::class, 'activateLearnedResponses']);
+
 // Admin Q&A Management Routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('admin/qa-pairs', QAPairController::class);

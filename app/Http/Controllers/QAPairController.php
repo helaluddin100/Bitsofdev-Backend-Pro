@@ -177,39 +177,49 @@ class QAPairController extends Controller
                 $visitorQuestion = null;
             }
 
-            // Check for quick answers first
-            $quickAnswer = $this->getQuickAnswer($userQuestion);
-            if ($quickAnswer) {
-                if ($visitorQuestion) {
-                    $visitorQuestion->update([
-                        'answer' => $quickAnswer,
-                        'status' => 'answered',
-                        'admin_notes' => 'Quick answer provided'
+            // Check for priority customer need patterns first (override quick answers)
+            $userQuestionLower = strtolower($userQuestion);
+            $isCustomerNeed = (strpos($userQuestionLower, 'i need') !== false || strpos($userQuestionLower, 'i want') !== false) && strpos($userQuestionLower, 'website') !== false;
+
+            // Check for quick answers only if not a customer need
+            if (!$isCustomerNeed) {
+                $quickAnswer = $this->getQuickAnswer($userQuestion);
+                if ($quickAnswer) {
+                    if ($visitorQuestion) {
+                        $visitorQuestion->update([
+                            'answer' => $quickAnswer,
+                            'status' => 'answered',
+                            'admin_notes' => 'Quick answer provided'
+                        ]);
+                    }
+
+                    return response()->json([
+                        'success' => true,
+                        'data' => [
+                            'question' => $userQuestion,
+                            'response' => $quickAnswer,
+                            'type' => 'quick_answer',
+                            'visitor_question_id' => $visitorQuestion ? $visitorQuestion->id : null
+                        ]
                     ]);
                 }
-
-                return response()->json([
-                    'success' => true,
-                    'data' => [
-                        'question' => $userQuestion,
-                        'response' => $quickAnswer,
-                        'type' => 'quick_answer',
-                        'visitor_question_id' => $visitorQuestion ? $visitorQuestion->id : null
-                    ]
-                ]);
             }
 
-            // Find matching Q&A pair with timeout protection
+
+
+            // Find matching Q&A pair with timeout protection (skip if customer need detected)
             $qaPair = null;
-            try {
-                $qaPair = QAPair::where('is_active', true)
-                    ->get()
-                    ->first(function ($qa) use ($userQuestion) {
-                        $question = strtolower(trim($qa->question));
-                        return str_contains($userQuestion, $question) || str_contains($question, $userQuestion);
-                    });
-            } catch (\Exception $e) {
-                Log::warning('Error searching Q&A pairs: ' . $e->getMessage());
+            if (!$isCustomerNeed) {
+                try {
+                    $qaPair = QAPair::where('is_active', true)
+                        ->get()
+                        ->first(function ($qa) use ($userQuestion) {
+                            $question = strtolower(trim($qa->question));
+                            return str_contains($userQuestion, $question) || str_contains($question, $userQuestion);
+                        });
+                } catch (\Exception $e) {
+                    Log::warning('Error searching Q&A pairs: ' . $e->getMessage());
+                }
             }
 
             if (!$qaPair) {
@@ -240,11 +250,14 @@ class QAPairController extends Controller
                 $aiAnswer = $this->getAIResponseFromAPI($userQuestion);
 
                 if ($aiAnswer) {
+                    // Store AI response in database for learning
+                    $this->storeAIResponseForLearning($userQuestion, $aiAnswer);
+
                     // Update visitor question with AI answer
                     if ($visitorQuestion) {
                         $visitorQuestion->update([
                             'status' => 'answered',
-                            'admin_notes' => 'Answered using AI API (ChatGPT/Gemini)'
+                            'admin_notes' => 'Answered using AI API (ChatGPT/Gemini) - Stored for learning'
                         ]);
                     }
 
@@ -351,8 +364,8 @@ class QAPairController extends Controller
      */
     private function getQuickAnswer($question)
     {
-        $quickAnswers = [
-            // Date and Time
+        // Only keep essential time/date responses for AI learning
+        $essentialAnswers = [
             'date' => 'Today is ' . now()->format('l, F j, Y'),
             'time' => 'Current time is ' . now()->format('g:i A'),
             'today' => 'Today is ' . now()->format('l, F j, Y'),
@@ -360,32 +373,9 @@ class QAPairController extends Controller
             'aj ki tarik' => 'আজ ' . now()->format('j F, Y') . ' তারিখ',
             'current date' => 'Today is ' . now()->format('l, F j, Y'),
             'current time' => 'Current time is ' . now()->format('g:i A'),
-
-            // Greetings
-            'hello' => 'Hello! How can I help you today?',
-            'hi' => 'Hi there! What can I do for you?',
-            'good morning' => 'Good morning! How can I assist you?',
-            'good afternoon' => 'Good afternoon! What can I help you with?',
-            'good evening' => 'Good evening! How may I help you?',
-            'assalamu alaikum' => 'Wa Alaikum Assalam! How can I help you?',
-            'salam' => 'Wa Alaikum Assalam! What can I do for you?',
-
-            // Company Info
-            'company name' => 'We are BitsOfDev - a leading web development company.',
-            'who are you' => 'I am the AI assistant for BitsOfDev. I can help you with information about our services, projects, and more.',
-            'what is bitsofdev' => 'BitsOfDev is a professional web development company specializing in modern web technologies and digital solutions.',
-
-            // Contact
-            'contact' => 'You can contact us through our contact form on the website or reach out to us directly.',
-            'phone' => 'For phone inquiries, please check our contact page for the latest contact information.',
-            'email' => 'You can reach us via email through our contact form on the website.',
-
-            // Website Info
-            'website' => 'You are currently on the BitsOfDev website. We offer web development, mobile app development, and digital solutions.',
-            'services' => 'We offer web development, mobile app development, UI/UX design, and digital consultation services.',
         ];
 
-        foreach ($quickAnswers as $keyword => $answer) {
+        foreach ($essentialAnswers as $keyword => $answer) {
             if (str_contains($question, $keyword)) {
                 return $answer;
             }
@@ -571,7 +561,7 @@ class QAPairController extends Controller
         }
 
         // Default contact suggestion
-        return "I apologize, but I couldn't find a specific answer to your question in our knowledge base. Our team of experts would be happy to help you with this. Please contact us through our contact page, and we'll get back to you with a detailed response. You can also call us directly for immediate assistance.";
+        return "I apologize, but I couldn't find a specific answer to your question in our knowledge base. Our team of experts would be happy to help you with this. Please contact us through our contact page at " . config('app.frontend_url', 'http://localhost:3000') . "/contact, and we'll get back to you with a detailed response. You can also call us directly for immediate assistance.";
     }
 
     /**
@@ -659,9 +649,19 @@ class QAPairController extends Controller
     {
         $question = strtolower($question);
 
+        // Priority check for customer website needs (override database)
+        if ((strpos($question, 'i need') !== false || strpos($question, 'i want') !== false) && strpos($question, 'website') !== false) {
+            return "Excellent! We'd love to help you create your website. To understand your specific requirements and provide the best solution, please contact our team. We can discuss your goals, features, design preferences, and budget. Visit our contact page to get started with a free consultation!";
+        }
+
         // Company information questions
         if (strpos($question, 'company') !== false || strpos($question, 'bits') !== false || strpos($question, 'who are you') !== false) {
             return "We are BitsOfDev, a leading web development company founded in 2019. With 5+ years of experience, we've delivered 100+ projects to 50+ happy clients. We provide 24/7 support and are committed to delivering exceptional digital solutions.";
+        }
+
+        // Specific service requests (car wash, restaurant, etc.)
+        if (strpos($question, 'car wash') !== false || strpos($question, 'restaurant') !== false || strpos($question, 'ecommerce') !== false || strpos($question, 'booking') !== false || strpos($question, 'website for') !== false) {
+            return "Great! We'd love to help you create that website. To understand your specific requirements and provide the best solution, please contact our team. We can discuss features, design, and functionality tailored to your business needs. Visit our contact page to get started!";
         }
 
         // Services questions
@@ -669,7 +669,12 @@ class QAPairController extends Controller
             return "We offer comprehensive digital services including web development, mobile app development, UI/UX design, and digital consultation. Our services cover everything from responsive web design and custom CMS integration to e-commerce functionality and performance optimization.";
         }
 
-        // Web development questions
+        // Web development questions - customer need-focused
+        if ((strpos($question, 'need') !== false || strpos($question, 'want') !== false || strpos($question, 'looking for') !== false) && strpos($question, 'website') !== false) {
+            return "Excellent! We'd love to help you create your website. To understand your specific requirements and provide the best solution, please contact our team. We can discuss your goals, features, design preferences, and budget. Visit our contact page to get started with a free consultation!";
+        }
+
+        // General web development questions
         if (strpos($question, 'website') !== false || strpos($question, 'web development') !== false || strpos($question, 'web site') !== false) {
             return "We specialize in web development services including responsive design, custom CMS integration, e-commerce functionality, and performance optimization. Our websites are built with modern technologies like React and Next.js for optimal performance and user experience.";
         }
@@ -691,7 +696,7 @@ class QAPairController extends Controller
 
         // Pricing questions
         if (strpos($question, 'price') !== false || strpos($question, 'cost') !== false || strpos($question, 'how much') !== false) {
-            return "Our pricing plans start at $999/month for the Starter plan, $2499/month for Professional, and $4999/month for Enterprise. Each plan includes different features and support levels. We also offer yearly plans with 17% discount. Contact us for a detailed quote tailored to your specific needs.";
+            return "For detailed pricing information and custom quotes, please contact our team. We offer flexible pricing plans tailored to your specific needs. Visit our contact page or call us directly for a personalized quote.";
         }
 
         // Team questions
@@ -707,6 +712,11 @@ class QAPairController extends Controller
         // Support questions
         if (strpos($question, 'support') !== false || strpos($question, 'help') !== false || strpos($question, 'maintenance') !== false) {
             return "We provide 24/7 dedicated support from our expert development team. Our support includes bug fixes, minor updates, security patches, and technical assistance. We also offer ongoing maintenance services to keep your project running smoothly.";
+        }
+
+        // Project/Portfolio questions
+        if (strpos($question, 'project') !== false || strpos($question, 'portfolio') !== false || strpos($question, 'work') !== false || strpos($question, 'example') !== false) {
+            return "To see our portfolio and discuss your specific project requirements, please contact our team. We'd be happy to show you our previous work and discuss how we can help with your project. Visit our contact page for more information.";
         }
 
         // Contact questions
@@ -738,12 +748,41 @@ class QAPairController extends Controller
                 return null;
             }
 
-            // Create context for the AI
-            $context = "You are a helpful assistant for BitsOfDev, a web development company. ";
-            $context .= "We offer web development, mobile app development, UI/UX design, and digital consultation services. ";
-            $context .= "We have 5+ years of experience and have delivered 100+ projects to 50+ happy clients. ";
-            $context .= "Please provide a helpful, professional response to the user's question. ";
-            $context .= "If the question is not related to our services, still try to be helpful but mention that we specialize in web development services.";
+            // Create enhanced context for the AI
+            $context = "You are BitsOfDev's AI assistant. BitsOfDev is a professional web development company with extensive experience in:
+
+            SERVICES WE PROVIDE:
+            - Restaurant Website Development (Online ordering, Menu management, Table booking, Delivery tracking, Customer reviews)
+            - E-commerce Website Development (Shopping cart, Payment gateways, Inventory management, Order tracking, Customer accounts)
+            - Business Website Development (Professional design, Contact forms, Service pages, Portfolio sections, SEO optimization)
+            - Corporate Website Development (Company information, Team pages, Service details, Modern functionality)
+            - Portfolio Website Development (Showcase work, Interactive elements, Modern design)
+            - Blog Website Development (CMS, SEO optimization, Social media integration)
+            - Mobile App Development (iOS, Android, Cross-platform, Modern UI/UX)
+            - UI/UX Design Services
+            - Digital Consultation Services
+
+            TECHNOLOGIES WE USE:
+            - Frontend: React, Next.js, Vue.js, Angular, HTML5, CSS3, JavaScript
+            - Backend: Laravel, Node.js, PHP, Python, Express.js
+            - Mobile: React Native, Flutter, Swift, Kotlin
+            - Database: MySQL, PostgreSQL, MongoDB
+            - Cloud: AWS, Google Cloud, DigitalOcean
+
+            OUR EXPERTISE:
+            - We have completed 150+ projects across various industries
+            - Specialized in healthcare, education, e-commerce, restaurant, and business websites
+            - Modern, responsive, and mobile-friendly designs
+            - SEO optimization and performance optimization
+            - Ongoing support and maintenance services
+
+            RESPONSE GUIDELINES:
+            - Be helpful, professional, and informative
+            - Provide specific details about our services when relevant
+            - Keep responses concise but comprehensive (2-4 sentences)
+            - For pricing, complex projects, or detailed consultations, suggest contacting our team
+            - Always mention our expertise and experience when relevant
+            - If someone asks about specific services (restaurant, e-commerce, business websites), provide detailed information about our capabilities";
 
             if ($apiProvider === 'openai') {
                 return $this->getOpenAIResponse($question, $context, $apiKey);
@@ -783,7 +822,7 @@ class QAPairController extends Controller
                             'content' => $question
                         ]
                     ],
-                    'max_tokens' => 200,
+                    'max_tokens' => 100,
                     'temperature' => 0.7
                 ],
                 'timeout' => 10
@@ -792,7 +831,8 @@ class QAPairController extends Controller
             $data = json_decode($response->getBody(), true);
 
             if (isset($data['choices'][0]['message']['content'])) {
-                return trim($data['choices'][0]['message']['content']);
+                $response = trim($data['choices'][0]['message']['content']);
+                return $this->shortenResponse($response);
             }
 
             return null;
@@ -825,7 +865,7 @@ class QAPairController extends Controller
                         ]
                     ],
                     'generationConfig' => [
-                        'maxOutputTokens' => 200,
+                        'maxOutputTokens' => 100,
                         'temperature' => 0.7
                     ]
                 ],
@@ -835,13 +875,124 @@ class QAPairController extends Controller
             $data = json_decode($response->getBody(), true);
 
             if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-                return trim($data['candidates'][0]['content']['parts'][0]['text']);
+                $response = trim($data['candidates'][0]['content']['parts'][0]['text']);
+                return $this->shortenResponse($response);
             }
 
             return null;
         } catch (\Exception $e) {
             Log::error('Gemini API error: ' . $e->getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Shorten AI response to keep it concise
+     */
+    private function shortenResponse($response)
+    {
+        // If response is too long, truncate it
+        if (strlen($response) > 200) {
+            $response = substr($response, 0, 200);
+            // Find the last complete sentence
+            $lastPeriod = strrpos($response, '.');
+            if ($lastPeriod !== false) {
+                $response = substr($response, 0, $lastPeriod + 1);
+            }
+        }
+
+        // Add contact suggestion for business-related responses
+        $businessKeywords = ['price', 'cost', 'project', 'quote', 'business', 'consultation', 'website', 'service', 'need', 'want', 'create', 'build', 'develop'];
+        $responseLower = strtolower($response);
+
+        foreach ($businessKeywords as $keyword) {
+            if (strpos($responseLower, $keyword) !== false) {
+                $response .= " For detailed information, please contact our team.";
+                break;
+            }
+        }
+
+        return $response;
+    }
+
+    /**
+     * Store AI response in database for learning purposes
+     */
+    private function storeAIResponseForLearning($question, $answer)
+    {
+        try {
+            // Check if this Q&A pair already exists
+            $existingPair = QAPair::where('question', $question)
+                ->where('answer', $answer)
+                ->first();
+
+            if (!$existingPair) {
+                // Create new Q&A pair for learning
+                QAPair::create([
+                    'question' => $question,
+                    'answer' => $answer,
+                    'category' => 'ai_learned',
+                    'is_active' => false, // Initially inactive - needs review
+                    'created_by' => 'ai_system',
+                    'notes' => 'Generated by AI API for learning purposes - needs human review'
+                ]);
+
+                Log::info('AI response stored for learning: ' . $question);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error storing AI response for learning: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get AI learning statistics
+     */
+    public function getAILearningStats()
+    {
+        try {
+            $totalLearned = QAPair::where('category', 'ai_learned')->count();
+            $activeLearned = QAPair::where('category', 'ai_learned')->where('is_active', true)->count();
+            $pendingReview = QAPair::where('category', 'ai_learned')->where('is_active', false)->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_learned' => $totalLearned,
+                    'active_learned' => $activeLearned,
+                    'pending_review' => $pendingReview,
+                    'learning_progress' => $totalLearned > 0 ? round(($activeLearned / $totalLearned) * 100, 2) : 0
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error getting AI learning stats: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Activate learned AI responses (for when AI is ready to publish)
+     */
+    public function activateLearnedResponses()
+    {
+        try {
+            $updated = QAPair::where('category', 'ai_learned')
+                ->where('is_active', false)
+                ->update(['is_active' => true]);
+
+            Log::info('Activated ' . $updated . ' learned AI responses');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Successfully activated ' . $updated . ' learned AI responses',
+                'activated_count' => $updated
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error activating learned responses: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

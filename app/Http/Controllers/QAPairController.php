@@ -364,7 +364,7 @@ class QAPairController extends Controller
      */
     private function getQuickAnswer($question)
     {
-        // Only keep essential time/date responses for AI learning
+        // Only keep essential time/date and conversation responses for AI learning
         $essentialAnswers = [
             'date' => 'Today is ' . now()->format('l, F j, Y'),
             'time' => 'Current time is ' . now()->format('g:i A'),
@@ -373,6 +373,17 @@ class QAPairController extends Controller
             'aj ki tarik' => 'আজ ' . now()->format('j F, Y') . ' তারিখ',
             'current date' => 'Today is ' . now()->format('l, F j, Y'),
             'current time' => 'Current time is ' . now()->format('g:i A'),
+
+            // Conversation acknowledgments
+            'okay' => 'Great! Is there anything else I can help you with?',
+            'ok' => 'Perfect! Let me know if you need any other information.',
+            'alright' => 'Excellent! Feel free to ask if you have more questions.',
+            'got it' => 'Wonderful! I\'m here if you need anything else.',
+            'understood' => 'Perfect! Don\'t hesitate to reach out for more help.',
+            'thanks' => 'You\'re welcome! Happy to help anytime.',
+            'thank you' => 'You\'re very welcome! Feel free to ask if you need anything else.',
+            'bye' => 'Goodbye! Have a great day!',
+            'goodbye' => 'Take care! Feel free to come back anytime.',
         ];
 
         foreach ($essentialAnswers as $keyword => $answer) {
@@ -782,7 +793,13 @@ class QAPairController extends Controller
             - Keep responses concise but comprehensive (2-4 sentences)
             - For pricing, complex projects, or detailed consultations, suggest contacting our team
             - Always mention our expertise and experience when relevant
-            - If someone asks about specific services (restaurant, e-commerce, business websites), provide detailed information about our capabilities";
+            - If someone asks about specific services (restaurant, e-commerce, business websites), provide detailed information about our capabilities
+
+            CONVERSATION CONTEXT:
+            - If user says 'okay', 'ok', 'alright', 'got it', 'understood' - respond with acknowledgment like 'Great! Is there anything else I can help you with?'
+            - If user says 'thanks', 'thank you' - respond with 'You're welcome! Feel free to ask if you need anything else.'
+            - If user says 'bye', 'goodbye' - respond with 'Goodbye! Have a great day!'
+            - Don't provide service information for conversation acknowledgments";
 
             if ($apiProvider === 'openai') {
                 return $this->getOpenAIResponse($question, $context, $apiKey);

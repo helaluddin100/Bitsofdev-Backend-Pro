@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\PricingController;
 use App\Http\Controllers\Api\AboutController;
 use App\Http\Controllers\Api\VisitorController;
+use App\Http\Controllers\Api\ContactController;
 
 // Public routes (no authentication required)
 Route::post('/register', [AuthController::class, 'register']);
@@ -74,4 +75,14 @@ Route::get('/pricing/{slug}', [PricingController::class, 'show']);
 Route::middleware('visitor.tracking')->group(function () {
     Route::post('/track-visitor', [VisitorController::class, 'store']);
     Route::post('/update-visitor-exit', [VisitorController::class, 'updateExit']);
+});
+
+// Contact Form API Routes
+Route::post('/contact', [ContactController::class, 'store']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/admin/contacts', [ContactController::class, 'index']);
+    Route::get('/admin/contacts/{contact}', [ContactController::class, 'show']);
+    Route::put('/admin/contacts/{contact}', [ContactController::class, 'update']);
+    Route::delete('/admin/contacts/{contact}', [ContactController::class, 'destroy']);
+    Route::get('/admin/contacts/statistics', [ContactController::class, 'statistics']);
 });

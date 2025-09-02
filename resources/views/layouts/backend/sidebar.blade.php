@@ -140,6 +140,14 @@
             </a>
         </li>
 
+        <!-- Contact Management -->
+        <li class="nav-item">
+            <a href="{{ route('admin.contacts.index') }}" class="nav-link">
+                <i class="link-icon" data-feather="mail"></i>
+                <span class="link-title">Contact Management</span>
+            </a>
+        </li>
+
             <li class="nav-item nav-category">System</li>
 
             <!-- User Management -->

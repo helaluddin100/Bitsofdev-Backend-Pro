@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\PricingController;
 use App\Http\Controllers\Admin\AboutController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\VisitorDataController;
+use App\Http\Controllers\Admin\ContactController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Artisan;
@@ -107,6 +108,10 @@ Route::namespace('App\Http\Controllers')->group(function () {
         Route::delete('visitors/{visitor}', [VisitorDataController::class, 'destroy'])->name('visitors.destroy');
         Route::post('visitors/bulk-delete', [VisitorDataController::class, 'bulkDelete'])->name('visitors.bulk-delete');
         Route::get('visitors/export', [VisitorDataController::class, 'export'])->name('visitors.export');
+
+        // Contact Management
+        Route::resource('contacts', ContactController::class);
+        Route::get('contacts/export', [ContactController::class, 'export'])->name('contacts.export');
     });
 });
 

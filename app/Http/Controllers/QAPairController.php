@@ -949,6 +949,17 @@ class QAPairController extends Controller
     private function getGeminiResponse($question, $context, $apiKey)
     {
         try {
+            // Check if we already have a response for this exact question
+            $existingResponse = QAPair::where('question', $question)
+                ->where('category', 'ai_learned')
+                ->where('is_active', true)
+                ->first();
+
+            if ($existingResponse) {
+                Log::info('Using cached Gemini response for question: ' . $question);
+                return $existingResponse->answer_1;
+            }
+
             $client = new \GuzzleHttp\Client();
 
             $response = $client->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey, [
@@ -967,7 +978,9 @@ class QAPairController extends Controller
                     ],
                     'generationConfig' => [
                         'maxOutputTokens' => 100,
-                        'temperature' => 0.7
+                        'temperature' => 0.1,  // Lower temperature for more consistent responses
+                        'topP' => 0.8,        // More focused responses
+                        'topK' => 20          // Limit vocabulary for consistency
                     ]
                 ],
                 'timeout' => 10

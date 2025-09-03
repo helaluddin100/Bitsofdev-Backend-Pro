@@ -41,10 +41,10 @@ class AISettingsController extends Controller
     {
         try {
             $validated = $request->validate([
-                'ai_provider' => 'required|in:gemini,own_ai,none',
-                'training_mode' => 'boolean',
-                'learning_threshold' => 'integer|min:1|max:100',
-                'use_static_responses' => 'boolean'
+                'ai_provider' => 'sometimes|in:gemini,own_ai,none',
+                'training_mode' => 'sometimes|boolean',
+                'learning_threshold' => 'sometimes|integer|min:1|max:100',
+                'use_static_responses' => 'sometimes|boolean'
             ]);
 
             $settings = AISettings::updateSettings($validated);

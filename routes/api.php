@@ -95,6 +95,14 @@ Route::get('/chat/qa-pairs', [QAPairController::class, 'index']);
 // AI Learning Routes
 Route::get('/ai/learning-stats', [QAPairController::class, 'getAILearningStats']);
 Route::post('/ai/activate-learned', [QAPairController::class, 'activateLearnedResponses']);
+Route::get('/ai/status', [QAPairController::class, 'checkAIStatus']);
+
+// AI Settings Routes
+Route::get('/ai/settings', [App\Http\Controllers\AISettingsController::class, 'getSettings']);
+Route::post('/ai/settings', [App\Http\Controllers\AISettingsController::class, 'updateSettings']);
+Route::post('/ai/switch-provider', [App\Http\Controllers\AISettingsController::class, 'switchProvider']);
+Route::post('/ai/toggle-training', [App\Http\Controllers\AISettingsController::class, 'toggleTrainingMode']);
+Route::post('/ai/toggle-static', [App\Http\Controllers\AISettingsController::class, 'toggleStaticResponses']);
 
 // Conversation History Routes
 Route::get('/conversation/history/{sessionId}', [QAPairController::class, 'getConversationHistory']);

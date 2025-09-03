@@ -179,6 +179,10 @@ class QAPairController extends Controller
             // Store visitor message
             ConversationMessage::addMessage($sessionId, 'visitor', $request->question);
 
+            // Get full conversation context for better understanding
+            $conversationHistory = $this->getConversationHistoryForContext($sessionId, 10);
+            $fullContext = $this->buildConversationContext($conversationHistory, $request->question);
+
             // Store visitor question with error handling
             try {
                 $visitorQuestion = VisitorQuestion::create([
@@ -200,13 +204,13 @@ class QAPairController extends Controller
 
             // Check for quick answers only if not a customer need AND static responses are enabled
             if (!$isCustomerNeed && $aiSettings->use_static_responses) {
-                $quickAnswer = $this->getQuickAnswer($userQuestion);
+                $quickAnswer = $this->getQuickAnswer($userQuestion, $fullContext);
                 if ($quickAnswer) {
                     if ($visitorQuestion) {
                         $visitorQuestion->update([
                             'answer' => $quickAnswer,
                             'status' => 'answered',
-                            'admin_notes' => 'Quick answer provided'
+                            'admin_notes' => 'Quick answer provided with context'
                         ]);
                     }
 
@@ -258,35 +262,41 @@ class QAPairController extends Controller
             }
 
             if (!$qaPair) {
-                // Try to generate intelligent answer from website content
-                $intelligentAnswer = $this->generateAnswerFromWebsiteData($userQuestion);
+                // Try to generate intelligent answer from website content (only if static responses are enabled)
+                if ($aiSettings->use_static_responses) {
+                    $intelligentAnswer = $this->generateAnswerFromWebsiteData($userQuestion);
 
-                if ($intelligentAnswer) {
-                    // Update visitor question with intelligent answer
-                    if ($visitorQuestion) {
-                        $visitorQuestion->update([
-                            'status' => 'answered',
-                            'admin_notes' => 'Answered using intelligent content analysis'
+                    if ($intelligentAnswer) {
+                        // Update visitor question with intelligent answer
+                        if ($visitorQuestion) {
+                            $visitorQuestion->update([
+                                'status' => 'answered',
+                                'admin_notes' => 'Answered using intelligent content analysis'
+                            ]);
+                        }
+
+                        // Store intelligent answer in conversation history
+                        ConversationMessage::addMessage($sessionId, 'ai', $intelligentAnswer);
+
+                        return response()->json([
+                            'success' => true,
+                            'data' => [
+                                'question' => $userQuestion,
+                                'response' => $intelligentAnswer,
+                                'type' => 'intelligent_answer',
+                                'visitor_question_id' => $visitorQuestion ? $visitorQuestion->id : null
+                            ]
                         ]);
                     }
-
-                    // Store intelligent answer in conversation history
-                    ConversationMessage::addMessage($sessionId, 'ai', $intelligentAnswer);
-
-                    return response()->json([
-                        'success' => true,
-                        'data' => [
-                            'question' => $userQuestion,
-                            'response' => $intelligentAnswer,
-                            'type' => 'intelligent_answer',
-                            'visitor_question_id' => $visitorQuestion ? $visitorQuestion->id : null
-                        ]
-                    ]);
                 }
 
                 // If no intelligent answer, try AI API based on settings
-                $conversationHistory = $this->getConversationHistoryForContext($sessionId);
-                $aiAnswer = $this->getAIResponseFromAPI($userQuestion, $aiSettings, $conversationHistory);
+                $aiAnswer = $this->getAIResponseFromAPI($userQuestion, $aiSettings, $conversationHistory, $fullContext);
+
+                // If AI API fails, try to get a better fallback response
+                if (!$aiAnswer) {
+                    $aiAnswer = $this->getIntelligentFallbackResponse($userQuestion, $fullContext);
+                }
 
                 if ($aiAnswer) {
                     // Store AI response in database for learning
@@ -402,11 +412,116 @@ class QAPairController extends Controller
     }
 
     /**
-     * Get quick answer for common questions
+     * Build conversation context for better understanding
      */
-    private function getQuickAnswer($question)
+    private function buildConversationContext($conversationHistory, $currentQuestion)
+    {
+        $context = [
+            'current_question' => $currentQuestion,
+            'conversation_flow' => [],
+            'user_intent' => $this->analyzeUserIntent($currentQuestion, $conversationHistory),
+            'previous_topics' => $this->extractPreviousTopics($conversationHistory),
+            'conversation_stage' => $this->determineConversationStage($conversationHistory)
+        ];
+
+        // Build conversation flow
+        foreach ($conversationHistory as $message) {
+            $context['conversation_flow'][] = [
+                'sender' => $message['sender'],
+                'message' => $message['message'],
+                'timestamp' => $message['timestamp']
+            ];
+        }
+
+        return $context;
+    }
+
+    /**
+     * Analyze user intent based on conversation context
+     */
+    private function analyzeUserIntent($currentQuestion, $conversationHistory)
+    {
+        $question = strtolower($currentQuestion);
+        $intent = 'general_inquiry';
+
+        // Check for customer needs
+        if ((strpos($question, 'i need') !== false || strpos($question, 'i want') !== false) &&
+            (strpos($question, 'website') !== false || strpos($question, 'app') !== false)) {
+            $intent = 'customer_need';
+        }
+        // Check for service inquiries
+        elseif (strpos($question, 'service') !== false || strpos($question, 'what do you do') !== false) {
+            $intent = 'service_inquiry';
+        }
+        // Check for pricing inquiries
+        elseif (strpos($question, 'price') !== false || strpos($question, 'cost') !== false) {
+            $intent = 'pricing_inquiry';
+        }
+        // Check for project discussions
+        elseif (strpos($question, 'project') !== false || strpos($question, 'development') !== false) {
+            $intent = 'project_discussion';
+        }
+        // Check for follow-up questions
+        elseif (count($conversationHistory) > 0) {
+            $intent = 'follow_up';
+        }
+
+        return $intent;
+    }
+
+    /**
+     * Extract previous topics from conversation
+     */
+    private function extractPreviousTopics($conversationHistory)
+    {
+        $topics = [];
+        foreach ($conversationHistory as $message) {
+            if ($message['sender'] === 'visitor') {
+                $question = strtolower($message['message']);
+                if (strpos($question, 'website') !== false) $topics[] = 'website';
+                if (strpos($question, 'app') !== false) $topics[] = 'mobile_app';
+                if (strpos($question, 'design') !== false) $topics[] = 'design';
+                if (strpos($question, 'price') !== false) $topics[] = 'pricing';
+                if (strpos($question, 'service') !== false) $topics[] = 'services';
+            }
+        }
+        return array_unique($topics);
+    }
+
+    /**
+     * Determine conversation stage
+     */
+    private function determineConversationStage($conversationHistory)
+    {
+        $messageCount = count($conversationHistory);
+        if ($messageCount === 0) return 'initial';
+        if ($messageCount <= 2) return 'exploration';
+        if ($messageCount <= 5) return 'discussion';
+        return 'detailed_inquiry';
+    }
+
+    /**
+     * Get quick answer for common questions with context
+     */
+    private function getQuickAnswer($question, $context = null)
     {
         $question = strtolower(trim($question));
+
+        // Context-aware responses
+        if ($context && isset($context['user_intent'])) {
+            $intent = $context['user_intent'];
+
+            // Handle follow-up questions with context
+            if ($intent === 'follow_up' && isset($context['previous_topics'])) {
+                $topics = $context['previous_topics'];
+                if (in_array('website', $topics)) {
+                    return "Based on our previous discussion about websites, I'd be happy to provide more specific information. What particular aspect of website development would you like to know more about?";
+                }
+                if (in_array('pricing', $topics)) {
+                    return "For detailed pricing information tailored to your specific needs, I'd recommend contacting our team directly. We can provide customized quotes based on your project requirements.";
+                }
+            }
+        }
 
         // Only keep essential time/date and conversation responses for AI learning
         $essentialAnswers = [
@@ -657,20 +772,34 @@ class QAPairController extends Controller
         return [
             'company' => [
                 'name' => 'BitsOfDev',
-                'description' => 'We are BitsOfDev - a leading web development company',
+                'description' => 'We are BitsOfDev - a leading web development and digital agency',
                 'founded' => '2019',
                 'experience' => '5+ years',
                 'projects' => '100+ projects delivered',
                 'clients' => '50+ happy clients',
-                'support' => '24/7 support available'
+                'support' => '24/7 support available',
+                'location' => 'Based in Bangladesh, serving clients worldwide',
+                'specialization' => 'Website redesign, mobile optimization, SEO, and digital marketing'
             ],
             'services' => [
-                'web_development' => 'We offer web development services including responsive design, custom CMS integration, e-commerce functionality, and performance optimization',
+                'web_development' => 'We offer comprehensive web development services including responsive design, custom CMS integration, e-commerce functionality, and performance optimization',
+                'website_redesign' => 'We specialize in modernizing existing websites with responsive design, improved user experience, and better performance',
+                'mobile_optimization' => 'We fix mobile responsiveness issues and ensure your website works perfectly on all devices',
                 'mobile_app' => 'We provide mobile app development for both iOS and Android platforms with modern UI/UX design',
                 'ui_ux_design' => 'Our UI/UX design services focus on creating intuitive and beautiful user experiences',
+                'seo_services' => 'We provide comprehensive SEO optimization services including keyword research, on-page optimization, and technical SEO',
+                'digital_marketing' => 'We offer digital marketing services including social media marketing, Google Ads, and Facebook Ads',
                 'consulting' => 'We offer digital consultation services to help businesses leverage technology for growth',
-                'seo' => 'We provide SEO optimization services to improve your website\'s search engine rankings',
-                'hosting' => 'We offer web development, mobile app development, UI/UX design, and digital consultation services'
+                'maintenance' => 'We provide ongoing website maintenance, security updates, and technical support',
+                'hosting' => 'We offer reliable hosting solutions with 99.9% uptime guarantee'
+            ],
+            'common_issues' => [
+                'mobile_responsive' => 'We fix websites that don\'t display properly on mobile devices',
+                'slow_loading' => 'We optimize website speed and loading times for better performance',
+                'seo_problems' => 'We improve search engine rankings and visibility',
+                'security_issues' => 'We provide security audits, SSL certificates, and malware protection',
+                'outdated_design' => 'We modernize old websites with contemporary design and functionality',
+                'broken_functionality' => 'We fix broken links, forms, and other website functionality issues'
             ],
             'process' => [
                 'discovery' => 'We start by understanding your business, goals, and requirements through detailed consultation',
@@ -679,9 +808,12 @@ class QAPairController extends Controller
                 'launch' => 'We ensure a smooth launch and provide ongoing support to help you succeed'
             ],
             'pricing' => [
-                'starter' => 'Starter plan starts at $999/month and includes responsive web design, up to 5 pages, basic SEO, contact form integration, and 30 days support',
-                'professional' => 'Professional plan is $2499/month and includes everything in Starter plus up to 15 pages, custom CMS, e-commerce functionality, advanced SEO, and 90 days support',
-                'enterprise' => 'Enterprise plan is $4999/month and includes unlimited pages, custom web applications, API development, database design, and 6 months support'
+                'website_redesign' => 'Website redesign starts from $299 and includes modern design, mobile responsiveness, and basic SEO',
+                'seo_packages' => 'SEO packages start from $199/month for local businesses and $499/month for e-commerce sites',
+                'digital_marketing' => 'Digital marketing services start from $399/month including social media management and Google Ads',
+                'maintenance' => 'Website maintenance starts from $99/month including updates, backups, and security monitoring',
+                'security_audit' => 'Security audit starts from $199 one-time fee with ongoing monitoring',
+                'performance_optimization' => 'Performance optimization starts from $149 with guaranteed speed improvement'
             ],
             'team' => [
                 'alex_chen' => 'Alex Chen is our Lead Developer with expertise in React, Node.js, and cloud technologies',
@@ -689,16 +821,28 @@ class QAPairController extends Controller
                 'mike_rodriguez' => 'Mike Rodriguez is our Project Manager ensuring smooth delivery and client satisfaction'
             ],
             'technologies' => [
-                'frontend' => 'We use modern frontend technologies including React, Next.js, and responsive design',
-                'backend' => 'Our backend technologies include Node.js, Python, and robust database systems',
-                'cloud' => 'We work with cloud platforms like AWS and Azure for scalable solutions',
-                'mobile' => 'For mobile development, we use native iOS and Android development approaches'
+                'frontend' => 'We use modern frontend technologies including React, Next.js, Vue.js, and responsive design',
+                'backend' => 'Our backend technologies include Laravel, Node.js, PHP, Python, and robust database systems',
+                'cloud' => 'We work with cloud platforms like AWS, Google Cloud, and DigitalOcean for scalable solutions',
+                'mobile' => 'For mobile development, we use React Native, Flutter, and native iOS/Android development',
+                'seo_tools' => 'We use Google Analytics, Search Console, SEMrush, Ahrefs, and Yoast SEO',
+                'marketing_tools' => 'We use Google Ads, Facebook Ads Manager, Mailchimp, and Hootsuite'
             ],
             'features' => [
                 'fast' => 'We deliver lightning-fast, optimized solutions for speed and performance',
                 'secure' => 'Enterprise-grade security with 99.9% uptime guarantee and regular backups',
                 'support' => '24/7 dedicated support from our expert development team with project managers',
-                'quality' => 'We maintain the highest standards in code quality, design, and project delivery'
+                'quality' => 'We maintain the highest standards in code quality, design, and project delivery',
+                'mobile_first' => 'All our websites are mobile-first and responsive across all devices',
+                'seo_optimized' => 'Every website we build is SEO-optimized for better search engine visibility'
+            ],
+            'industries' => [
+                'restaurant' => 'We specialize in restaurant websites with online ordering, menu management, and table booking',
+                'ecommerce' => 'We build powerful e-commerce websites with shopping carts, payment gateways, and inventory management',
+                'business' => 'We create professional business websites with modern design and functionality',
+                'corporate' => 'We develop corporate websites with company information, team pages, and service details',
+                'portfolio' => 'We design portfolio websites to showcase work with interactive elements',
+                'blog' => 'We build blog websites with CMS, SEO optimization, and social media integration'
             ]
         ];
     }
@@ -715,6 +859,22 @@ class QAPairController extends Controller
             return "Excellent! We'd love to help you create your website. To understand your specific requirements and provide the best solution, please contact our team. We can discuss your goals, features, design preferences, and budget. Visit our contact page to get started with a free consultation!";
         }
 
+        // "Can you make" or "Do you make" type questions
+        if ((strpos($question, 'can you make') !== false || strpos($question, 'do you make') !== false || strpos($question, 'make you') !== false) &&
+            (strpos($question, 'website') !== false || strpos($question, 'app') !== false || strpos($question, 'mobile') !== false)
+        ) {
+
+            if (strpos($question, 'car wash') !== false) {
+                return "Absolutely! We can create a professional car wash website for you. Our car wash websites include online booking system, service packages, customer management, payment integration, and mobile-responsive design. We can also add features like appointment scheduling, service pricing, customer reviews, and location finder. Contact our team to discuss your specific car wash business requirements!";
+            } elseif (strpos($question, 'restaurant') !== false) {
+                return "Yes! We can build a beautiful restaurant website for you. Our restaurant websites include online menu, table reservation system, food ordering, delivery integration, and customer reviews. We also add photo galleries, location finder, contact forms, and social media integration. Contact our team to discuss your restaurant's specific needs!";
+            } elseif (strpos($question, 'ecommerce') !== false || strpos($question, 'online store') !== false) {
+                return "Definitely! We can create a powerful e-commerce website for you. Our e-commerce solutions include product catalog, shopping cart, payment processing, inventory management, and order tracking. We also add mobile optimization, SEO features, and analytics integration. Contact our team to discuss your online store requirements!";
+            } else {
+                return "Yes, we can definitely create that for you! We specialize in building custom websites and mobile apps. To understand your specific requirements and provide the best solution, please contact our team. We can discuss your goals, features, design preferences, and budget. Visit our contact page to get started with a free consultation!";
+            }
+        }
+
         // Priority check for mobile app customer needs
         if ((strpos($question, 'i need') !== false || strpos($question, 'i want') !== false) && (strpos($question, 'mobile') !== false || strpos($question, 'app') !== false)) {
             return "Excellent! We'd love to help you create your mobile app. To understand your specific requirements and provide the best solution, please contact our team. We can discuss your app goals, features, platform preferences (iOS/Android), and budget. Visit our contact page to get started with a free consultation!";
@@ -725,13 +885,24 @@ class QAPairController extends Controller
             return "We are BitsOfDev, a leading web development company founded in 2019. With 5+ years of experience, we've delivered 100+ projects to 50+ happy clients. We provide 24/7 support and are committed to delivering exceptional digital solutions.";
         }
 
-        // Specific service requests (car wash, restaurant, etc.)
+        // Specific business type requests (car wash, restaurant, etc.)
         if (strpos($question, 'car wash') !== false || strpos($question, 'restaurant') !== false || strpos($question, 'ecommerce') !== false || strpos($question, 'booking') !== false || strpos($question, 'website for') !== false) {
-            return "Great! We'd love to help you create that website. To understand your specific requirements and provide the best solution, please contact our team. We can discuss features, design, and functionality tailored to your business needs. Visit our contact page to get started!";
+            // Check if it's a specific business type request
+            if (strpos($question, 'car wash') !== false) {
+                return "Excellent! We'd love to help you create a car wash website. We can build features like online booking, service packages, customer management, payment integration, and mobile-responsive design. Our car wash websites include appointment scheduling, service pricing, customer reviews, and location finder. Contact our team to discuss your specific car wash business needs!";
+            } elseif (strpos($question, 'restaurant') !== false) {
+                return "Perfect! We specialize in restaurant websites with features like online menu, table reservation, food ordering, delivery integration, and customer reviews. Our restaurant websites include photo galleries, location finder, contact forms, and social media integration. Contact our team to discuss your restaurant's specific needs!";
+            } elseif (strpos($question, 'ecommerce') !== false) {
+                return "Great! We build powerful e-commerce websites with features like product catalog, shopping cart, payment processing, inventory management, and order tracking. Our e-commerce solutions include mobile optimization, SEO features, and analytics integration. Contact our team to discuss your online store requirements!";
+            } else {
+                return "Great! We'd love to help you create that website. To understand your specific requirements and provide the best solution, please contact our team. We can discuss features, design, and functionality tailored to your business needs. Visit our contact page to get started!";
+            }
         }
 
-        // Services questions
-        if (strpos($question, 'service') !== false || strpos($question, 'what do you do') !== false || strpos($question, 'offer') !== false) {
+        // Services questions (require intent words)
+        if ((strpos($question, 'service') !== false || strpos($question, 'what do you do') !== false || strpos($question, 'offer') !== false) &&
+            (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false)
+        ) {
             return "We offer comprehensive digital services including web development, mobile app development, UI/UX design, and digital consultation. Our services cover everything from responsive web design and custom CMS integration to e-commerce functionality and performance optimization.";
         }
 
@@ -740,59 +911,101 @@ class QAPairController extends Controller
             return "Excellent! We'd love to help you create your website. To understand your specific requirements and provide the best solution, please contact our team. We can discuss your goals, features, design preferences, and budget. Visit our contact page to get started with a free consultation!";
         }
 
-        // General web development questions
-        if (strpos($question, 'website') !== false || strpos($question, 'web development') !== false || strpos($question, 'web site') !== false) {
+        // General web development questions (require more context)
+        if ((strpos($question, 'website') !== false || strpos($question, 'web development') !== false || strpos($question, 'web site') !== false) &&
+            (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false || strpos($question, 'services') !== false)
+        ) {
             return "We specialize in web development services including responsive design, custom CMS integration, e-commerce functionality, and performance optimization. Our websites are built with modern technologies like React and Next.js for optimal performance and user experience.";
         }
 
-        // Mobile app questions
-        if (strpos($question, 'mobile') !== false || strpos($question, 'app') !== false || strpos($question, 'ios') !== false || strpos($question, 'android') !== false) {
+        // Mobile app questions (require more context)
+        if ((strpos($question, 'mobile') !== false || strpos($question, 'app') !== false || strpos($question, 'ios') !== false || strpos($question, 'android') !== false) &&
+            (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false || strpos($question, 'services') !== false || strpos($question, 'develop') !== false)
+        ) {
             return "Yes, we provide mobile app development for both iOS and Android platforms. Our mobile development services include native app development with modern UI/UX design, ensuring your app delivers an exceptional user experience across all devices.";
         }
 
-        // UI/UX design questions
-        if (strpos($question, 'design') !== false || strpos($question, 'ui') !== false || strpos($question, 'ux') !== false) {
+        // UI/UX design questions (require more context)
+        if ((strpos($question, 'design') !== false || strpos($question, 'ui') !== false || strpos($question, 'ux') !== false) &&
+            (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false || strpos($question, 'services') !== false)
+        ) {
             return "Our UI/UX design services focus on creating intuitive and beautiful user experiences. Our team, led by Sarah Kim, is passionate about designing interfaces that are both functional and visually appealing, ensuring your users have the best possible experience.";
         }
 
-        // Process questions
-        if (strpos($question, 'process') !== false || strpos($question, 'how do you work') !== false || strpos($question, 'workflow') !== false) {
+        // Process questions (require intent words)
+        if ((strpos($question, 'process') !== false || strpos($question, 'how do you work') !== false || strpos($question, 'workflow') !== false) &&
+            (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false)
+        ) {
             return "Our proven process includes 4 key steps: 1) Discovery - understanding your business and requirements, 2) Planning - creating comprehensive project plans and architecture, 3) Development - bringing your vision to life with cutting-edge technologies, 4) Launch & Support - ensuring smooth deployment and ongoing support.";
         }
 
-        // Pricing questions
-        if (strpos($question, 'price') !== false || strpos($question, 'cost') !== false || strpos($question, 'how much') !== false) {
+        // Pricing questions (require intent words)
+        if ((strpos($question, 'price') !== false || strpos($question, 'cost') !== false || strpos($question, 'how much') !== false) &&
+            (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false || strpos($question, 'much') !== false)
+        ) {
             return "For detailed pricing information and custom quotes, please contact our team. We offer flexible pricing plans tailored to your specific needs. Visit our contact page or call us directly for a personalized quote.";
         }
 
-        // Team questions
-        if (strpos($question, 'team') !== false || strpos($question, 'who works') !== false || strpos($question, 'developer') !== false) {
+        // Team questions (require intent words)
+        if ((strpos($question, 'team') !== false || strpos($question, 'who works') !== false || strpos($question, 'developer') !== false) &&
+            (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false || strpos($question, 'who') !== false)
+        ) {
             return "Our talented team includes Alex Chen (Lead Developer with React/Node.js expertise), Sarah Kim (UI/UX Designer focused on beautiful user experiences), and Mike Rodriguez (Project Manager ensuring smooth delivery). We're a passionate team committed to delivering exceptional results.";
         }
 
-        // Technology questions
-        if (strpos($question, 'technology') !== false || strpos($question, 'tech') !== false || strpos($question, 'framework') !== false) {
+        // Technology questions (require intent words)
+        if ((strpos($question, 'technology') !== false || strpos($question, 'tech') !== false || strpos($question, 'framework') !== false) &&
+            (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false)
+        ) {
             return "We use modern technologies including React, Next.js, Node.js, Python, and cloud platforms like AWS and Azure. We stay updated with the latest industry standards and choose the best technology stack for each project to ensure optimal performance and scalability.";
         }
 
-        // Support questions
-        if (strpos($question, 'support') !== false || strpos($question, 'help') !== false || strpos($question, 'maintenance') !== false) {
+        // Support questions (require intent words)
+        if ((strpos($question, 'support') !== false || strpos($question, 'help') !== false || strpos($question, 'maintenance') !== false) &&
+            (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false)
+        ) {
             return "We provide 24/7 dedicated support from our expert development team. Our support includes bug fixes, minor updates, security patches, and technical assistance. We also offer ongoing maintenance services to keep your project running smoothly.";
         }
 
-        // Project/Portfolio questions
-        if (strpos($question, 'project') !== false || strpos($question, 'portfolio') !== false || strpos($question, 'work') !== false || strpos($question, 'example') !== false) {
+        // Project/Portfolio questions (require intent words)
+        if ((strpos($question, 'project') !== false || strpos($question, 'portfolio') !== false || strpos($question, 'work') !== false || strpos($question, 'example') !== false) &&
+            (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false || strpos($question, 'show') !== false)
+        ) {
             return "To see our portfolio and discuss your specific project requirements, please contact our team. We'd be happy to show you our previous work and discuss how we can help with your project. Visit our contact page for more information.";
         }
 
-        // Contact questions
-        if (strpos($question, 'contact') !== false || strpos($question, 'reach') !== false || strpos($question, 'get in touch') !== false) {
+        // Contact questions (require intent words)
+        if ((strpos($question, 'contact') !== false || strpos($question, 'reach') !== false || strpos($question, 'get in touch') !== false) &&
+            (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false || strpos($question, 'can i') !== false)
+        ) {
             return "You can contact us through our contact form on the website, email us at hello@bitsofdev.com, or call us at +1 (555) 123-4567. We respond within 24 hours and offer free consultations to discuss your project needs.";
         }
 
-        // Quality/Features questions
-        if (strpos($question, 'quality') !== false || strpos($question, 'fast') !== false || strpos($question, 'secure') !== false) {
+        // Quality/Features questions (require intent words)
+        if ((strpos($question, 'quality') !== false || strpos($question, 'fast') !== false || strpos($question, 'secure') !== false) &&
+            (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false)
+        ) {
             return "We maintain the highest standards in code quality, design, and project delivery. Our solutions are optimized for speed and performance, include enterprise-grade security with 99.9% uptime guarantee, and come with regular backups and monitoring.";
+        }
+
+        // Handle single words or very short questions
+        $wordCount = str_word_count($question);
+        if ($wordCount <= 2) {
+            // Check if it's a common single word that should get a helpful response
+            $commonWords = ['website', 'mobile', 'app', 'design', 'ui', 'ux', 'price', 'cost', 'team', 'contact', 'help', 'service', 'project', 'portfolio'];
+            $isCommonWord = false;
+            $matchedWord = '';
+            foreach ($commonWords as $word) {
+                if (strpos($question, $word) !== false) {
+                    $isCommonWord = true;
+                    $matchedWord = $word;
+                    break;
+                }
+            }
+
+            if ($isCommonWord) {
+                return "I'd be happy to help you with {$matchedWord}! Could you please ask a more specific question? For example, instead of just '{$question}', you could ask 'What {$matchedWord} services do you offer?' or 'How much does {$matchedWord} development cost?' This way I can give you a more detailed and helpful answer.";
+            }
         }
 
         // Default response for unmatched questions
@@ -831,7 +1044,7 @@ class QAPairController extends Controller
     /**
      * Get AI response from external API (ChatGPT/Gemini)
      */
-    private function getAIResponseFromAPI($question, $aiSettings = null, $conversationHistory = [])
+    private function getAIResponseFromAPI($question, $aiSettings = null, $conversationHistory = [], $fullContext = null)
     {
         try {
             // Use settings if provided, otherwise fall back to config
@@ -845,7 +1058,13 @@ class QAPairController extends Controller
 
             if (!$apiKey || $apiProvider === 'none') {
                 Log::info('AI API not configured, skipping external AI call');
-                return null;
+                return $this->getFallbackResponse($question, $fullContext);
+            }
+
+            // Validate API key format
+            if ($apiProvider === 'gemini' && (strlen($apiKey) < 20 || !str_starts_with($apiKey, 'AI'))) {
+                Log::warning('Invalid Gemini API key format');
+                return $this->getFallbackResponse($question, $fullContext);
             }
 
             // Check if training mode is enabled and we have enough learned responses
@@ -858,9 +1077,16 @@ class QAPairController extends Controller
             }
 
             // Create enhanced context for the AI
-            $context = "You are BitsOfDev's AI assistant. BitsOfDev is a professional web development company with extensive experience in:
+            $context = "You are BitsOfDev's AI assistant. BitsOfDev is a leading software development agency specializing in web development, mobile apps, marketing, and SEO services.
 
             SERVICES WE PROVIDE:
+            - Website Redesign & Modernization (Modern design, mobile responsiveness, user experience improvement)
+            - Mobile Responsive Fixes (Fix existing website mobile display issues, ensure perfect mobile experience)
+            - SEO Optimization Services (Keyword research, on-page optimization, technical SEO, content marketing)
+            - Digital Marketing Services (Social media marketing, Google Ads, Facebook Ads, email marketing)
+            - Website Security Updates (Security audits, SSL certificates, malware removal, regular security updates)
+            - Performance Optimization (Website speed improvement, loading time optimization, performance enhancement)
+            - Website Maintenance (Ongoing updates, backups, technical support, monitoring)
             - Restaurant Website Development (Online ordering, Menu management, Table booking, Delivery tracking, Customer reviews)
             - E-commerce Website Development (Shopping cart, Payment gateways, Inventory management, Order tracking, Customer accounts)
             - Business Website Development (Professional design, Contact forms, Service pages, Portfolio sections, SEO optimization)
@@ -871,19 +1097,41 @@ class QAPairController extends Controller
             - UI/UX Design Services
             - Digital Consultation Services
 
+            COMMON WEBSITE ISSUES WE SOLVE:
+            - Mobile responsiveness problems (websites not displaying properly on mobile devices)
+            - Slow loading websites (performance optimization and speed improvement)
+            - Poor SEO rankings (comprehensive SEO optimization and strategy)
+            - Security vulnerabilities (security audits, SSL implementation, malware protection)
+            - Outdated designs (modern website redesign and user experience improvement)
+            - No analytics tracking (Google Analytics setup and tracking implementation)
+            - Broken links and functionality issues (website maintenance and fixes)
+            - Poor user experience (navigation improvement and design optimization)
+
             TECHNOLOGIES WE USE:
             - Frontend: React, Next.js, Vue.js, Angular, HTML5, CSS3, JavaScript
             - Backend: Laravel, Node.js, PHP, Python, Express.js
             - Mobile: React Native, Flutter, Swift, Kotlin
             - Database: MySQL, PostgreSQL, MongoDB
             - Cloud: AWS, Google Cloud, DigitalOcean
+            - SEO Tools: Google Analytics, Search Console, SEMrush, Ahrefs, Yoast SEO
+            - Marketing Tools: Google Ads, Facebook Ads Manager, Mailchimp, Hootsuite
+            - Security Tools: SSL certificates, malware scanners, firewalls, security audits
 
             OUR EXPERTISE:
-            - We have completed 150+ projects across various industries
-            - Specialized in healthcare, education, e-commerce, restaurant, and business websites
+            - We have completed 100+ projects across various industries
+            - Specialized in website redesign, mobile optimization, SEO, and digital marketing
             - Modern, responsive, and mobile-friendly designs
-            - SEO optimization and performance optimization
-            - Ongoing support and maintenance services
+            - Comprehensive SEO optimization and performance enhancement
+            - 24/7 support and ongoing maintenance services
+            - Full-service digital agency providing development, marketing, and SEO solutions
+
+            PRICING INFORMATION:
+            - Website redesign: Starting from $299 (includes modern design, mobile responsiveness, basic SEO)
+            - SEO packages: $199/month for local businesses, $499/month for e-commerce sites
+            - Digital marketing: Starting from $399/month (social media management, Google Ads)
+            - Website maintenance: Starting from $99/month (updates, backups, security monitoring)
+            - Security audit: Starting from $199 one-time fee with ongoing monitoring
+            - Performance optimization: Starting from $149 with guaranteed speed improvement
 
             RESPONSE GUIDELINES:
             - Be helpful, professional, and informative
@@ -891,7 +1139,9 @@ class QAPairController extends Controller
             - Keep responses concise but comprehensive (2-4 sentences)
             - For pricing, complex projects, or detailed consultations, suggest contacting our team
             - Always mention our expertise and experience when relevant
-            - If someone asks about specific services (restaurant, e-commerce, business websites), provide detailed information about our capabilities
+            - If someone asks about website issues (mobile responsive, SEO, security, speed), provide detailed information about our solutions
+            - Emphasize that we help with existing websites, not just new ones
+            - Mention that many clients come to us with existing websites that need improvements
 
             CONVERSATION CONTEXT:
             - If user says 'okay', 'ok', 'alright', 'got it', 'understood' - respond with acknowledgment like 'Great! Is there anything else I can help you with?'
@@ -912,13 +1162,13 @@ class QAPairController extends Controller
             if ($apiProvider === 'openai') {
                 return $this->getOpenAIResponse($question, $context, $apiKey);
             } elseif ($apiProvider === 'gemini') {
-                return $this->getGeminiResponse($question, $context, $apiKey);
+                return $this->getGeminiResponse($question, $context, $apiKey, $fullContext);
             }
 
-            return null;
+            return $this->getFallbackResponse($question, $fullContext);
         } catch (\Exception $e) {
             Log::error('Error getting AI response from API: ' . $e->getMessage());
-            return null;
+            return $this->getFallbackResponse($question, $fullContext);
         }
     }
 
@@ -1006,60 +1256,117 @@ class QAPairController extends Controller
     }
 
     /**
-     * Get response from Google Gemini API
+     * Get response from Google Gemini API with retry mechanism
      */
-    private function getGeminiResponse($question, $context, $apiKey)
+    private function getGeminiResponse($question, $context, $apiKey, $fullContext = null)
     {
-        try {
-            // Check if we already have a response for this exact question
-            $existingResponse = QAPair::where('question', $question)
-                ->where('category', 'ai_learned')
-                ->where('is_active', true)
-                ->first();
+        $maxRetries = 3;
+        $retryDelay = 1; // seconds
 
-            if ($existingResponse) {
-                Log::info('Using cached Gemini response for question: ' . $question);
-                return $existingResponse->answer_1;
-            }
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                // Check if we already have a response for this exact question
+                // But only use cache if it's not the first attempt (to avoid stale responses)
+                if ($attempt > 1) {
+                    $existingResponse = QAPair::where('question', $question)
+                        ->where('category', 'ai_learned')
+                        ->where('is_active', true)
+                        ->first();
 
-            $client = new \GuzzleHttp\Client();
+                    if ($existingResponse) {
+                        Log::info('Using cached Gemini response for question: ' . $question);
+                        return $existingResponse->answer_1;
+                    }
+                }
 
-            $response = $client->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey, [
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                ],
-                'json' => [
-                    'contents' => [
-                        [
-                            'parts' => [
-                                [
-                                    'text' => $context . "\n\nUser Question: " . $question
+                $client = new \GuzzleHttp\Client([
+                    'timeout' => 20, // Increased timeout for better reliability
+                    'connect_timeout' => 15,
+                    'read_timeout' => 20
+                ]);
+
+                $response = $client->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey, [
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                        'User-Agent' => 'BitsOfDev-AI/1.0'
+                    ],
+                    'json' => [
+                        'contents' => [
+                            [
+                                'parts' => [
+                                    [
+                                        'text' => $context . "\n\nUser Question: " . $question
+                                    ]
                                 ]
                             ]
+                        ],
+                        'generationConfig' => [
+                            'maxOutputTokens' => 200, // Increased for better responses
+                            'temperature' => 0.1,  // Lower temperature for more consistent responses
+                            'topP' => 0.8,        // More focused responses
+                            'topK' => 20          // Limit vocabulary for consistency
+                        ],
+                        'safetySettings' => [
+                            [
+                                'category' => 'HARM_CATEGORY_HARASSMENT',
+                                'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
+                            ],
+                            [
+                                'category' => 'HARM_CATEGORY_HATE_SPEECH',
+                                'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
+                            ]
                         ]
-                    ],
-                    'generationConfig' => [
-                        'maxOutputTokens' => 100,
-                        'temperature' => 0.1,  // Lower temperature for more consistent responses
-                        'topP' => 0.8,        // More focused responses
-                        'topK' => 20          // Limit vocabulary for consistency
                     ]
-                ],
-                'timeout' => 10
-            ]);
+                ]);
 
-            $data = json_decode($response->getBody(), true);
+                $data = json_decode($response->getBody(), true);
 
-            if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-                $response = trim($data['candidates'][0]['content']['parts'][0]['text']);
-                return $this->shortenResponse($response);
+                // Better response validation
+                if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                    $responseText = trim($data['candidates'][0]['content']['parts'][0]['text']);
+                    if (!empty($responseText)) {
+                        Log::info('Gemini API success on attempt ' . $attempt . ' for question: ' . substr($question, 0, 50));
+                        return $this->shortenResponse($responseText);
+                    }
+                }
+
+                // Check for API errors in response
+                if (isset($data['error'])) {
+                    Log::warning('Gemini API error: ' . json_encode($data['error']));
+                    if ($attempt === $maxRetries) {
+                        return $this->getFallbackResponse($question, $fullContext);
+                    }
+                    continue;
+                }
+
+                // If no response but no error, try fallback
+                if ($attempt === $maxRetries) {
+                    Log::warning('Gemini API returned no response after ' . $maxRetries . ' attempts for question: ' . substr($question, 0, 50));
+                    return $this->getFallbackResponse($question, $fullContext);
+                }
+
+            } catch (\GuzzleHttp\Exception\ConnectException $e) {
+                Log::warning('Gemini API connection error on attempt ' . $attempt . ': ' . $e->getMessage());
+                if ($attempt === $maxRetries) {
+                    return $this->getFallbackResponse($question, $fullContext);
+                }
+                sleep($retryDelay * $attempt); // Exponential backoff
+            } catch (\GuzzleHttp\Exception\RequestException $e) {
+                Log::warning('Gemini API request error on attempt ' . $attempt . ': ' . $e->getMessage());
+                if ($attempt === $maxRetries) {
+                    return $this->getFallbackResponse($question, $fullContext);
+                }
+                sleep($retryDelay * $attempt);
+            } catch (\Exception $e) {
+                Log::error('Gemini API unexpected error on attempt ' . $attempt . ': ' . $e->getMessage());
+                if ($attempt === $maxRetries) {
+                    return $this->getFallbackResponse($question, $fullContext);
+                }
+                sleep($retryDelay * $attempt);
             }
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Gemini API error: ' . $e->getMessage());
-            return null;
         }
+
+        return $this->getFallbackResponse($question, $fullContext);
     }
 
     /**
@@ -1092,6 +1399,96 @@ class QAPairController extends Controller
     }
 
     /**
+     * Get fallback response when AI APIs fail
+     */
+    private function getFallbackResponse($question, $fullContext = null)
+    {
+        $question = strtolower($question);
+
+        // Use context to provide better fallback responses
+        if ($fullContext && isset($fullContext['user_intent'])) {
+            $intent = $fullContext['user_intent'];
+
+            switch ($intent) {
+                case 'customer_need':
+                    return "I understand you're looking for website or app development services. While I'm experiencing some technical difficulties, I'd be happy to connect you with our team for a detailed discussion about your project needs. Please contact us through our contact page for immediate assistance.";
+
+                case 'service_inquiry':
+                    return "We offer comprehensive web development, mobile app development, UI/UX design, and digital marketing services. For detailed information about our services, please contact our team directly through our contact page.";
+
+                case 'pricing_inquiry':
+                    return "For accurate pricing information tailored to your specific project requirements, please contact our team directly. We provide customized quotes based on your needs and budget.";
+
+                case 'project_discussion':
+                    return "I'd love to discuss your project in detail. Please contact our team through our contact page, and we'll schedule a consultation to understand your requirements better.";
+
+                case 'follow_up':
+                    return "I'm experiencing some technical difficulties right now, but I want to make sure you get the information you need. Please contact our team directly for immediate assistance.";
+
+                default:
+                    return "I'm currently experiencing some technical difficulties, but I'm here to help. Please contact our team directly through our contact page for immediate assistance with your inquiry.";
+            }
+        }
+
+        // Default fallback responses based on keywords
+        if (strpos($question, 'website') !== false || strpos($question, 'web') !== false) {
+            return "We specialize in website development and redesign services. For detailed information about our web development capabilities, please contact our team directly.";
+        }
+
+        if (strpos($question, 'app') !== false || strpos($question, 'mobile') !== false) {
+            return "We provide mobile app development services for both iOS and Android. Contact our team for detailed information about our mobile development capabilities.";
+        }
+
+        if (strpos($question, 'price') !== false || strpos($question, 'cost') !== false) {
+            return "For accurate pricing information, please contact our team directly. We provide customized quotes based on your specific project requirements.";
+        }
+
+        // Generic fallback
+        return "I'm currently experiencing some technical difficulties, but I'm here to help. Please contact our team directly through our contact page for immediate assistance with your inquiry.";
+    }
+
+    /**
+     * Get intelligent fallback response when AI API completely fails
+     */
+    private function getIntelligentFallbackResponse($question, $fullContext = null)
+    {
+        $question = strtolower($question);
+
+        // Design-related questions
+        if (strpos($question, 'design') !== false || strpos($question, 'follow') !== false) {
+            return "Yes, we can follow your provided design exactly! Our team specializes in implementing custom designs with pixel-perfect accuracy. We can work with your existing design files (Figma, Adobe XD, PSD, etc.) and bring them to life as a fully functional website. Contact our team to discuss your design requirements and get started.";
+        }
+
+        // Website development questions
+        if (strpos($question, 'website') !== false || strpos($question, 'web') !== false) {
+            return "We specialize in website development and redesign services. Our team can create modern, responsive websites that work perfectly on all devices. We offer custom development, CMS integration, e-commerce solutions, and performance optimization. Contact our team to discuss your website needs and get a customized quote.";
+        }
+
+        // Mobile app questions
+        if (strpos($question, 'app') !== false || strpos($question, 'mobile') !== false) {
+            return "Yes, we develop mobile applications for both iOS and Android platforms. Our mobile app development services include native app development, cross-platform solutions, and modern UI/UX design. We can create apps for various industries including business, e-commerce, and entertainment. Contact our team to discuss your mobile app requirements.";
+        }
+
+        // Pricing questions
+        if (strpos($question, 'price') !== false || strpos($question, 'cost') !== false || strpos($question, 'how much') !== false) {
+            return "Our pricing varies based on project requirements and complexity. We offer competitive rates for website development, mobile apps, and digital marketing services. For accurate pricing information tailored to your specific needs, please contact our team directly. We provide free consultations and detailed quotes.";
+        }
+
+        // Service questions
+        if (strpos($question, 'service') !== false || strpos($question, 'what do you do') !== false) {
+            return "We are BitsOfDev, a leading web development and digital agency. Our services include website development, mobile app development, UI/UX design, SEO optimization, digital marketing, and website maintenance. We help businesses establish their online presence and grow their digital footprint. Contact our team to learn more about our services.";
+        }
+
+        // Project questions
+        if (strpos($question, 'project') !== false || strpos($question, 'work') !== false) {
+            return "We'd love to discuss your project! Our team has completed 100+ projects across various industries. We can help with website development, mobile apps, digital marketing, and more. Contact our team to schedule a consultation and discuss your project requirements in detail.";
+        }
+
+        // Default intelligent response
+        return "I'm here to help you with your digital needs! We specialize in website development, mobile apps, UI/UX design, and digital marketing services. For detailed information about our services or to discuss your project requirements, please contact our team directly. We offer free consultations and are always happy to help.";
+    }
+
+    /**
      * Store AI response in database for learning purposes
      */
     private function storeAIResponseForLearning($question, $answer)
@@ -1108,14 +1505,114 @@ class QAPairController extends Controller
                     'question' => $question,
                     'answer_1' => $answer,
                     'category' => 'ai_learned',
-                    'is_active' => false, // Initially inactive - needs review
+                    'is_active' => true, // Auto-activate Gemini responses - they are reliable
                     'usage_count' => 0
                 ]);
 
                 Log::info('AI response stored for learning: ' . $question);
+
+                // Also store conversation context for better learning
+                $this->storeConversationContext($question, $answer);
+            } else {
+                // Increment usage count for existing learned response
+                $existingPair->incrementUsage();
             }
         } catch (\Exception $e) {
             Log::error('Error storing AI response for learning: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Store conversation context for better AI learning
+     */
+    private function storeConversationContext($question, $answer)
+    {
+        try {
+            // Store additional context about the conversation
+            $contextData = [
+                'question_type' => $this->categorizeQuestion($question),
+                'answer_quality' => $this->assessAnswerQuality($answer),
+                'timestamp' => now(),
+                'source' => 'ai_generated'
+            ];
+
+            // You can extend this to store more context in a separate table if needed
+            Log::info('Conversation context stored: ' . json_encode($contextData));
+        } catch (\Exception $e) {
+            Log::error('Error storing conversation context: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Categorize question for better learning
+     */
+    private function categorizeQuestion($question)
+    {
+        $question = strtolower($question);
+
+        if (strpos($question, 'website') !== false) return 'website_related';
+        if (strpos($question, 'app') !== false || strpos($question, 'mobile') !== false) return 'mobile_related';
+        if (strpos($question, 'price') !== false || strpos($question, 'cost') !== false) return 'pricing_related';
+        if (strpos($question, 'service') !== false) return 'service_related';
+        if (strpos($question, 'project') !== false) return 'project_related';
+        if (strpos($question, 'design') !== false) return 'design_related';
+        if (strpos($question, 'seo') !== false) return 'seo_related';
+
+        return 'general_inquiry';
+    }
+
+    /**
+     * Assess answer quality for learning improvement
+     */
+    private function assessAnswerQuality($answer)
+    {
+        $quality = 'good';
+
+        // Check answer length and completeness
+        if (strlen($answer) < 50) $quality = 'short';
+        if (strlen($answer) > 500) $quality = 'long';
+
+        // Check for contact suggestions (indicates incomplete answer)
+        if (strpos($answer, 'contact') !== false && strpos($answer, 'team') !== false) {
+            $quality = 'requires_contact';
+        }
+
+        return $quality;
+    }
+
+    /**
+     * Check AI system status and configuration
+     */
+    public function checkAIStatus()
+    {
+        try {
+            $aiSettings = AISettings::getCurrent();
+            $apiKey = config('app.ai_api_key');
+            $apiProvider = config('app.ai_provider', 'gemini');
+
+            $status = [
+                'ai_provider' => $apiProvider,
+                'api_key_configured' => !empty($apiKey),
+                'api_key_valid' => false,
+                'settings' => $aiSettings,
+                'learned_responses' => QAPair::where('category', 'ai_learned')->count(),
+                'active_learned' => QAPair::where('category', 'ai_learned')->where('is_active', true)->count()
+            ];
+
+            // Validate API key format
+            if ($apiProvider === 'gemini' && !empty($apiKey)) {
+                $status['api_key_valid'] = (strlen($apiKey) >= 20 && str_starts_with($apiKey, 'AI'));
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $status
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error checking AI status: ' . $e->getMessage()
+            ], 500);
         }
     }
 

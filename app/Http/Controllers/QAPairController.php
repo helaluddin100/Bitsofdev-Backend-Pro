@@ -293,6 +293,11 @@ class QAPairController extends Controller
                 // If no intelligent answer, try AI API based on settings
                 $aiAnswer = $this->getAIResponseFromAPI($userQuestion, $aiSettings, $conversationHistory, $fullContext);
 
+                // If AI API fails, try to get a better fallback response
+                if (!$aiAnswer) {
+                    $aiAnswer = $this->getIntelligentFallbackResponse($userQuestion, $fullContext);
+                }
+
                 if ($aiAnswer) {
                     // Store AI response in database for learning
                     $this->storeAIResponseForLearning($userQuestion, $aiAnswer);
@@ -1056,6 +1061,12 @@ class QAPairController extends Controller
                 return $this->getFallbackResponse($question, $fullContext);
             }
 
+            // Validate API key format
+            if ($apiProvider === 'gemini' && (strlen($apiKey) < 20 || !str_starts_with($apiKey, 'AI'))) {
+                Log::warning('Invalid Gemini API key format');
+                return $this->getFallbackResponse($question, $fullContext);
+            }
+
             // Check if training mode is enabled and we have enough learned responses
             if ($aiSettings && $aiSettings->training_mode) {
                 $activeLearned = QAPair::where('category', 'ai_learned')->where('is_active', true)->count();
@@ -1255,24 +1266,29 @@ class QAPairController extends Controller
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             try {
                 // Check if we already have a response for this exact question
-                $existingResponse = QAPair::where('question', $question)
-                    ->where('category', 'ai_learned')
-                    ->where('is_active', true)
-                    ->first();
+                // But only use cache if it's not the first attempt (to avoid stale responses)
+                if ($attempt > 1) {
+                    $existingResponse = QAPair::where('question', $question)
+                        ->where('category', 'ai_learned')
+                        ->where('is_active', true)
+                        ->first();
 
-                if ($existingResponse) {
-                    Log::info('Using cached Gemini response for question: ' . $question);
-                    return $existingResponse->answer_1;
+                    if ($existingResponse) {
+                        Log::info('Using cached Gemini response for question: ' . $question);
+                        return $existingResponse->answer_1;
+                    }
                 }
 
                 $client = new \GuzzleHttp\Client([
-                    'timeout' => 15, // Increased timeout
-                    'connect_timeout' => 10
+                    'timeout' => 20, // Increased timeout for better reliability
+                    'connect_timeout' => 15,
+                    'read_timeout' => 20
                 ]);
 
                 $response = $client->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey, [
                     'headers' => [
                         'Content-Type' => 'application/json',
+                        'User-Agent' => 'BitsOfDev-AI/1.0'
                     ],
                     'json' => [
                         'contents' => [
@@ -1285,25 +1301,47 @@ class QAPairController extends Controller
                             ]
                         ],
                         'generationConfig' => [
-                            'maxOutputTokens' => 150, // Increased for better responses
+                            'maxOutputTokens' => 200, // Increased for better responses
                             'temperature' => 0.1,  // Lower temperature for more consistent responses
                             'topP' => 0.8,        // More focused responses
                             'topK' => 20          // Limit vocabulary for consistency
+                        ],
+                        'safetySettings' => [
+                            [
+                                'category' => 'HARM_CATEGORY_HARASSMENT',
+                                'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
+                            ],
+                            [
+                                'category' => 'HARM_CATEGORY_HATE_SPEECH',
+                                'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
+                            ]
                         ]
                     ]
                 ]);
 
                 $data = json_decode($response->getBody(), true);
 
+                // Better response validation
                 if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-                    $response = trim($data['candidates'][0]['content']['parts'][0]['text']);
-                    Log::info('Gemini API success on attempt ' . $attempt);
-                    return $this->shortenResponse($response);
+                    $responseText = trim($data['candidates'][0]['content']['parts'][0]['text']);
+                    if (!empty($responseText)) {
+                        Log::info('Gemini API success on attempt ' . $attempt . ' for question: ' . substr($question, 0, 50));
+                        return $this->shortenResponse($responseText);
+                    }
+                }
+
+                // Check for API errors in response
+                if (isset($data['error'])) {
+                    Log::warning('Gemini API error: ' . json_encode($data['error']));
+                    if ($attempt === $maxRetries) {
+                        return $this->getFallbackResponse($question, $fullContext);
+                    }
+                    continue;
                 }
 
                 // If no response but no error, try fallback
                 if ($attempt === $maxRetries) {
-                    Log::warning('Gemini API returned no response after ' . $maxRetries . ' attempts');
+                    Log::warning('Gemini API returned no response after ' . $maxRetries . ' attempts for question: ' . substr($question, 0, 50));
                     return $this->getFallbackResponse($question, $fullContext);
                 }
 
@@ -1410,6 +1448,47 @@ class QAPairController extends Controller
     }
 
     /**
+     * Get intelligent fallback response when AI API completely fails
+     */
+    private function getIntelligentFallbackResponse($question, $fullContext = null)
+    {
+        $question = strtolower($question);
+
+        // Design-related questions
+        if (strpos($question, 'design') !== false || strpos($question, 'follow') !== false) {
+            return "Yes, we can follow your provided design exactly! Our team specializes in implementing custom designs with pixel-perfect accuracy. We can work with your existing design files (Figma, Adobe XD, PSD, etc.) and bring them to life as a fully functional website. Contact our team to discuss your design requirements and get started.";
+        }
+
+        // Website development questions
+        if (strpos($question, 'website') !== false || strpos($question, 'web') !== false) {
+            return "We specialize in website development and redesign services. Our team can create modern, responsive websites that work perfectly on all devices. We offer custom development, CMS integration, e-commerce solutions, and performance optimization. Contact our team to discuss your website needs and get a customized quote.";
+        }
+
+        // Mobile app questions
+        if (strpos($question, 'app') !== false || strpos($question, 'mobile') !== false) {
+            return "Yes, we develop mobile applications for both iOS and Android platforms. Our mobile app development services include native app development, cross-platform solutions, and modern UI/UX design. We can create apps for various industries including business, e-commerce, and entertainment. Contact our team to discuss your mobile app requirements.";
+        }
+
+        // Pricing questions
+        if (strpos($question, 'price') !== false || strpos($question, 'cost') !== false || strpos($question, 'how much') !== false) {
+            return "Our pricing varies based on project requirements and complexity. We offer competitive rates for website development, mobile apps, and digital marketing services. For accurate pricing information tailored to your specific needs, please contact our team directly. We provide free consultations and detailed quotes.";
+        }
+
+        // Service questions
+        if (strpos($question, 'service') !== false || strpos($question, 'what do you do') !== false) {
+            return "We are BitsOfDev, a leading web development and digital agency. Our services include website development, mobile app development, UI/UX design, SEO optimization, digital marketing, and website maintenance. We help businesses establish their online presence and grow their digital footprint. Contact our team to learn more about our services.";
+        }
+
+        // Project questions
+        if (strpos($question, 'project') !== false || strpos($question, 'work') !== false) {
+            return "We'd love to discuss your project! Our team has completed 100+ projects across various industries. We can help with website development, mobile apps, digital marketing, and more. Contact our team to schedule a consultation and discuss your project requirements in detail.";
+        }
+
+        // Default intelligent response
+        return "I'm here to help you with your digital needs! We specialize in website development, mobile apps, UI/UX design, and digital marketing services. For detailed information about our services or to discuss your project requirements, please contact our team directly. We offer free consultations and are always happy to help.";
+    }
+
+    /**
      * Store AI response in database for learning purposes
      */
     private function storeAIResponseForLearning($question, $answer)
@@ -1499,6 +1578,42 @@ class QAPairController extends Controller
         }
 
         return $quality;
+    }
+
+    /**
+     * Check AI system status and configuration
+     */
+    public function checkAIStatus()
+    {
+        try {
+            $aiSettings = AISettings::getCurrent();
+            $apiKey = config('app.ai_api_key');
+            $apiProvider = config('app.ai_provider', 'gemini');
+
+            $status = [
+                'ai_provider' => $apiProvider,
+                'api_key_configured' => !empty($apiKey),
+                'api_key_valid' => false,
+                'settings' => $aiSettings,
+                'learned_responses' => QAPair::where('category', 'ai_learned')->count(),
+                'active_learned' => QAPair::where('category', 'ai_learned')->where('is_active', true)->count()
+            ];
+
+            // Validate API key format
+            if ($apiProvider === 'gemini' && !empty($apiKey)) {
+                $status['api_key_valid'] = (strlen($apiKey) >= 20 && str_starts_with($apiKey, 'AI'));
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $status
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error checking AI status: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

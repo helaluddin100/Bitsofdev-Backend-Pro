@@ -95,6 +95,7 @@ Route::get('/chat/qa-pairs', [QAPairController::class, 'index']);
 // AI Learning Routes
 Route::get('/ai/learning-stats', [QAPairController::class, 'getAILearningStats']);
 Route::post('/ai/activate-learned', [QAPairController::class, 'activateLearnedResponses']);
+Route::get('/ai/status', [QAPairController::class, 'checkAIStatus']);
 
 // AI Settings Routes
 Route::get('/ai/settings', [App\Http\Controllers\AISettingsController::class, 'getSettings']);

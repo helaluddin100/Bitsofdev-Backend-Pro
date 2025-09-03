@@ -1179,7 +1179,7 @@ class QAPairController extends Controller
                     'question' => $question,
                     'answer_1' => $answer,
                     'category' => 'ai_learned',
-                    'is_active' => false, // Initially inactive - needs review
+                    'is_active' => true, // Auto-activate Gemini responses - they are reliable
                     'usage_count' => 0
                 ]);
 

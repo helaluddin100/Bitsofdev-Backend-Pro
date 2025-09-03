@@ -179,6 +179,10 @@ class QAPairController extends Controller
             // Store visitor message
             ConversationMessage::addMessage($sessionId, 'visitor', $request->question);
 
+            // Get full conversation context for better understanding
+            $conversationHistory = $this->getConversationHistoryForContext($sessionId, 10);
+            $fullContext = $this->buildConversationContext($conversationHistory, $request->question);
+
             // Store visitor question with error handling
             try {
                 $visitorQuestion = VisitorQuestion::create([
@@ -200,13 +204,13 @@ class QAPairController extends Controller
 
             // Check for quick answers only if not a customer need AND static responses are enabled
             if (!$isCustomerNeed && $aiSettings->use_static_responses) {
-                $quickAnswer = $this->getQuickAnswer($userQuestion);
+                $quickAnswer = $this->getQuickAnswer($userQuestion, $fullContext);
                 if ($quickAnswer) {
                     if ($visitorQuestion) {
                         $visitorQuestion->update([
                             'answer' => $quickAnswer,
                             'status' => 'answered',
-                            'admin_notes' => 'Quick answer provided'
+                            'admin_notes' => 'Quick answer provided with context'
                         ]);
                     }
 
@@ -287,8 +291,7 @@ class QAPairController extends Controller
                 }
 
                 // If no intelligent answer, try AI API based on settings
-                $conversationHistory = $this->getConversationHistoryForContext($sessionId);
-                $aiAnswer = $this->getAIResponseFromAPI($userQuestion, $aiSettings, $conversationHistory);
+                $aiAnswer = $this->getAIResponseFromAPI($userQuestion, $aiSettings, $conversationHistory, $fullContext);
 
                 if ($aiAnswer) {
                     // Store AI response in database for learning
@@ -404,11 +407,116 @@ class QAPairController extends Controller
     }
 
     /**
-     * Get quick answer for common questions
+     * Build conversation context for better understanding
      */
-    private function getQuickAnswer($question)
+    private function buildConversationContext($conversationHistory, $currentQuestion)
+    {
+        $context = [
+            'current_question' => $currentQuestion,
+            'conversation_flow' => [],
+            'user_intent' => $this->analyzeUserIntent($currentQuestion, $conversationHistory),
+            'previous_topics' => $this->extractPreviousTopics($conversationHistory),
+            'conversation_stage' => $this->determineConversationStage($conversationHistory)
+        ];
+
+        // Build conversation flow
+        foreach ($conversationHistory as $message) {
+            $context['conversation_flow'][] = [
+                'sender' => $message['sender'],
+                'message' => $message['message'],
+                'timestamp' => $message['timestamp']
+            ];
+        }
+
+        return $context;
+    }
+
+    /**
+     * Analyze user intent based on conversation context
+     */
+    private function analyzeUserIntent($currentQuestion, $conversationHistory)
+    {
+        $question = strtolower($currentQuestion);
+        $intent = 'general_inquiry';
+
+        // Check for customer needs
+        if ((strpos($question, 'i need') !== false || strpos($question, 'i want') !== false) &&
+            (strpos($question, 'website') !== false || strpos($question, 'app') !== false)) {
+            $intent = 'customer_need';
+        }
+        // Check for service inquiries
+        elseif (strpos($question, 'service') !== false || strpos($question, 'what do you do') !== false) {
+            $intent = 'service_inquiry';
+        }
+        // Check for pricing inquiries
+        elseif (strpos($question, 'price') !== false || strpos($question, 'cost') !== false) {
+            $intent = 'pricing_inquiry';
+        }
+        // Check for project discussions
+        elseif (strpos($question, 'project') !== false || strpos($question, 'development') !== false) {
+            $intent = 'project_discussion';
+        }
+        // Check for follow-up questions
+        elseif (count($conversationHistory) > 0) {
+            $intent = 'follow_up';
+        }
+
+        return $intent;
+    }
+
+    /**
+     * Extract previous topics from conversation
+     */
+    private function extractPreviousTopics($conversationHistory)
+    {
+        $topics = [];
+        foreach ($conversationHistory as $message) {
+            if ($message['sender'] === 'visitor') {
+                $question = strtolower($message['message']);
+                if (strpos($question, 'website') !== false) $topics[] = 'website';
+                if (strpos($question, 'app') !== false) $topics[] = 'mobile_app';
+                if (strpos($question, 'design') !== false) $topics[] = 'design';
+                if (strpos($question, 'price') !== false) $topics[] = 'pricing';
+                if (strpos($question, 'service') !== false) $topics[] = 'services';
+            }
+        }
+        return array_unique($topics);
+    }
+
+    /**
+     * Determine conversation stage
+     */
+    private function determineConversationStage($conversationHistory)
+    {
+        $messageCount = count($conversationHistory);
+        if ($messageCount === 0) return 'initial';
+        if ($messageCount <= 2) return 'exploration';
+        if ($messageCount <= 5) return 'discussion';
+        return 'detailed_inquiry';
+    }
+
+    /**
+     * Get quick answer for common questions with context
+     */
+    private function getQuickAnswer($question, $context = null)
     {
         $question = strtolower(trim($question));
+
+        // Context-aware responses
+        if ($context && isset($context['user_intent'])) {
+            $intent = $context['user_intent'];
+
+            // Handle follow-up questions with context
+            if ($intent === 'follow_up' && isset($context['previous_topics'])) {
+                $topics = $context['previous_topics'];
+                if (in_array('website', $topics)) {
+                    return "Based on our previous discussion about websites, I'd be happy to provide more specific information. What particular aspect of website development would you like to know more about?";
+                }
+                if (in_array('pricing', $topics)) {
+                    return "For detailed pricing information tailored to your specific needs, I'd recommend contacting our team directly. We can provide customized quotes based on your project requirements.";
+                }
+            }
+        }
 
         // Only keep essential time/date and conversation responses for AI learning
         $essentialAnswers = [
@@ -659,20 +767,34 @@ class QAPairController extends Controller
         return [
             'company' => [
                 'name' => 'BitsOfDev',
-                'description' => 'We are BitsOfDev - a leading web development company',
+                'description' => 'We are BitsOfDev - a leading web development and digital agency',
                 'founded' => '2019',
                 'experience' => '5+ years',
                 'projects' => '100+ projects delivered',
                 'clients' => '50+ happy clients',
-                'support' => '24/7 support available'
+                'support' => '24/7 support available',
+                'location' => 'Based in Bangladesh, serving clients worldwide',
+                'specialization' => 'Website redesign, mobile optimization, SEO, and digital marketing'
             ],
             'services' => [
-                'web_development' => 'We offer web development services including responsive design, custom CMS integration, e-commerce functionality, and performance optimization',
+                'web_development' => 'We offer comprehensive web development services including responsive design, custom CMS integration, e-commerce functionality, and performance optimization',
+                'website_redesign' => 'We specialize in modernizing existing websites with responsive design, improved user experience, and better performance',
+                'mobile_optimization' => 'We fix mobile responsiveness issues and ensure your website works perfectly on all devices',
                 'mobile_app' => 'We provide mobile app development for both iOS and Android platforms with modern UI/UX design',
                 'ui_ux_design' => 'Our UI/UX design services focus on creating intuitive and beautiful user experiences',
+                'seo_services' => 'We provide comprehensive SEO optimization services including keyword research, on-page optimization, and technical SEO',
+                'digital_marketing' => 'We offer digital marketing services including social media marketing, Google Ads, and Facebook Ads',
                 'consulting' => 'We offer digital consultation services to help businesses leverage technology for growth',
-                'seo' => 'We provide SEO optimization services to improve your website\'s search engine rankings',
-                'hosting' => 'We offer web development, mobile app development, UI/UX design, and digital consultation services'
+                'maintenance' => 'We provide ongoing website maintenance, security updates, and technical support',
+                'hosting' => 'We offer reliable hosting solutions with 99.9% uptime guarantee'
+            ],
+            'common_issues' => [
+                'mobile_responsive' => 'We fix websites that don\'t display properly on mobile devices',
+                'slow_loading' => 'We optimize website speed and loading times for better performance',
+                'seo_problems' => 'We improve search engine rankings and visibility',
+                'security_issues' => 'We provide security audits, SSL certificates, and malware protection',
+                'outdated_design' => 'We modernize old websites with contemporary design and functionality',
+                'broken_functionality' => 'We fix broken links, forms, and other website functionality issues'
             ],
             'process' => [
                 'discovery' => 'We start by understanding your business, goals, and requirements through detailed consultation',
@@ -681,9 +803,12 @@ class QAPairController extends Controller
                 'launch' => 'We ensure a smooth launch and provide ongoing support to help you succeed'
             ],
             'pricing' => [
-                'starter' => 'Starter plan starts at $999/month and includes responsive web design, up to 5 pages, basic SEO, contact form integration, and 30 days support',
-                'professional' => 'Professional plan is $2499/month and includes everything in Starter plus up to 15 pages, custom CMS, e-commerce functionality, advanced SEO, and 90 days support',
-                'enterprise' => 'Enterprise plan is $4999/month and includes unlimited pages, custom web applications, API development, database design, and 6 months support'
+                'website_redesign' => 'Website redesign starts from $299 and includes modern design, mobile responsiveness, and basic SEO',
+                'seo_packages' => 'SEO packages start from $199/month for local businesses and $499/month for e-commerce sites',
+                'digital_marketing' => 'Digital marketing services start from $399/month including social media management and Google Ads',
+                'maintenance' => 'Website maintenance starts from $99/month including updates, backups, and security monitoring',
+                'security_audit' => 'Security audit starts from $199 one-time fee with ongoing monitoring',
+                'performance_optimization' => 'Performance optimization starts from $149 with guaranteed speed improvement'
             ],
             'team' => [
                 'alex_chen' => 'Alex Chen is our Lead Developer with expertise in React, Node.js, and cloud technologies',
@@ -691,16 +816,28 @@ class QAPairController extends Controller
                 'mike_rodriguez' => 'Mike Rodriguez is our Project Manager ensuring smooth delivery and client satisfaction'
             ],
             'technologies' => [
-                'frontend' => 'We use modern frontend technologies including React, Next.js, and responsive design',
-                'backend' => 'Our backend technologies include Node.js, Python, and robust database systems',
-                'cloud' => 'We work with cloud platforms like AWS and Azure for scalable solutions',
-                'mobile' => 'For mobile development, we use native iOS and Android development approaches'
+                'frontend' => 'We use modern frontend technologies including React, Next.js, Vue.js, and responsive design',
+                'backend' => 'Our backend technologies include Laravel, Node.js, PHP, Python, and robust database systems',
+                'cloud' => 'We work with cloud platforms like AWS, Google Cloud, and DigitalOcean for scalable solutions',
+                'mobile' => 'For mobile development, we use React Native, Flutter, and native iOS/Android development',
+                'seo_tools' => 'We use Google Analytics, Search Console, SEMrush, Ahrefs, and Yoast SEO',
+                'marketing_tools' => 'We use Google Ads, Facebook Ads Manager, Mailchimp, and Hootsuite'
             ],
             'features' => [
                 'fast' => 'We deliver lightning-fast, optimized solutions for speed and performance',
                 'secure' => 'Enterprise-grade security with 99.9% uptime guarantee and regular backups',
                 'support' => '24/7 dedicated support from our expert development team with project managers',
-                'quality' => 'We maintain the highest standards in code quality, design, and project delivery'
+                'quality' => 'We maintain the highest standards in code quality, design, and project delivery',
+                'mobile_first' => 'All our websites are mobile-first and responsive across all devices',
+                'seo_optimized' => 'Every website we build is SEO-optimized for better search engine visibility'
+            ],
+            'industries' => [
+                'restaurant' => 'We specialize in restaurant websites with online ordering, menu management, and table booking',
+                'ecommerce' => 'We build powerful e-commerce websites with shopping carts, payment gateways, and inventory management',
+                'business' => 'We create professional business websites with modern design and functionality',
+                'corporate' => 'We develop corporate websites with company information, team pages, and service details',
+                'portfolio' => 'We design portfolio websites to showcase work with interactive elements',
+                'blog' => 'We build blog websites with CMS, SEO optimization, and social media integration'
             ]
         ];
     }
@@ -902,7 +1039,7 @@ class QAPairController extends Controller
     /**
      * Get AI response from external API (ChatGPT/Gemini)
      */
-    private function getAIResponseFromAPI($question, $aiSettings = null, $conversationHistory = [])
+    private function getAIResponseFromAPI($question, $aiSettings = null, $conversationHistory = [], $fullContext = null)
     {
         try {
             // Use settings if provided, otherwise fall back to config
@@ -916,7 +1053,7 @@ class QAPairController extends Controller
 
             if (!$apiKey || $apiProvider === 'none') {
                 Log::info('AI API not configured, skipping external AI call');
-                return null;
+                return $this->getFallbackResponse($question, $fullContext);
             }
 
             // Check if training mode is enabled and we have enough learned responses
@@ -1014,13 +1151,13 @@ class QAPairController extends Controller
             if ($apiProvider === 'openai') {
                 return $this->getOpenAIResponse($question, $context, $apiKey);
             } elseif ($apiProvider === 'gemini') {
-                return $this->getGeminiResponse($question, $context, $apiKey);
+                return $this->getGeminiResponse($question, $context, $apiKey, $fullContext);
             }
 
-            return null;
+            return $this->getFallbackResponse($question, $fullContext);
         } catch (\Exception $e) {
             Log::error('Error getting AI response from API: ' . $e->getMessage());
-            return null;
+            return $this->getFallbackResponse($question, $fullContext);
         }
     }
 
@@ -1108,60 +1245,90 @@ class QAPairController extends Controller
     }
 
     /**
-     * Get response from Google Gemini API
+     * Get response from Google Gemini API with retry mechanism
      */
-    private function getGeminiResponse($question, $context, $apiKey)
+    private function getGeminiResponse($question, $context, $apiKey, $fullContext = null)
     {
-        try {
-            // Check if we already have a response for this exact question
-            $existingResponse = QAPair::where('question', $question)
-                ->where('category', 'ai_learned')
-                ->where('is_active', true)
-                ->first();
+        $maxRetries = 3;
+        $retryDelay = 1; // seconds
 
-            if ($existingResponse) {
-                Log::info('Using cached Gemini response for question: ' . $question);
-                return $existingResponse->answer_1;
-            }
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                // Check if we already have a response for this exact question
+                $existingResponse = QAPair::where('question', $question)
+                    ->where('category', 'ai_learned')
+                    ->where('is_active', true)
+                    ->first();
 
-            $client = new \GuzzleHttp\Client();
+                if ($existingResponse) {
+                    Log::info('Using cached Gemini response for question: ' . $question);
+                    return $existingResponse->answer_1;
+                }
 
-            $response = $client->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey, [
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                ],
-                'json' => [
-                    'contents' => [
-                        [
-                            'parts' => [
-                                [
-                                    'text' => $context . "\n\nUser Question: " . $question
+                $client = new \GuzzleHttp\Client([
+                    'timeout' => 15, // Increased timeout
+                    'connect_timeout' => 10
+                ]);
+
+                $response = $client->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey, [
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                    ],
+                    'json' => [
+                        'contents' => [
+                            [
+                                'parts' => [
+                                    [
+                                        'text' => $context . "\n\nUser Question: " . $question
+                                    ]
                                 ]
                             ]
+                        ],
+                        'generationConfig' => [
+                            'maxOutputTokens' => 150, // Increased for better responses
+                            'temperature' => 0.1,  // Lower temperature for more consistent responses
+                            'topP' => 0.8,        // More focused responses
+                            'topK' => 20          // Limit vocabulary for consistency
                         ]
-                    ],
-                    'generationConfig' => [
-                        'maxOutputTokens' => 100,
-                        'temperature' => 0.1,  // Lower temperature for more consistent responses
-                        'topP' => 0.8,        // More focused responses
-                        'topK' => 20          // Limit vocabulary for consistency
                     ]
-                ],
-                'timeout' => 10
-            ]);
+                ]);
 
-            $data = json_decode($response->getBody(), true);
+                $data = json_decode($response->getBody(), true);
 
-            if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-                $response = trim($data['candidates'][0]['content']['parts'][0]['text']);
-                return $this->shortenResponse($response);
+                if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                    $response = trim($data['candidates'][0]['content']['parts'][0]['text']);
+                    Log::info('Gemini API success on attempt ' . $attempt);
+                    return $this->shortenResponse($response);
+                }
+
+                // If no response but no error, try fallback
+                if ($attempt === $maxRetries) {
+                    Log::warning('Gemini API returned no response after ' . $maxRetries . ' attempts');
+                    return $this->getFallbackResponse($question, $fullContext);
+                }
+
+            } catch (\GuzzleHttp\Exception\ConnectException $e) {
+                Log::warning('Gemini API connection error on attempt ' . $attempt . ': ' . $e->getMessage());
+                if ($attempt === $maxRetries) {
+                    return $this->getFallbackResponse($question, $fullContext);
+                }
+                sleep($retryDelay * $attempt); // Exponential backoff
+            } catch (\GuzzleHttp\Exception\RequestException $e) {
+                Log::warning('Gemini API request error on attempt ' . $attempt . ': ' . $e->getMessage());
+                if ($attempt === $maxRetries) {
+                    return $this->getFallbackResponse($question, $fullContext);
+                }
+                sleep($retryDelay * $attempt);
+            } catch (\Exception $e) {
+                Log::error('Gemini API unexpected error on attempt ' . $attempt . ': ' . $e->getMessage());
+                if ($attempt === $maxRetries) {
+                    return $this->getFallbackResponse($question, $fullContext);
+                }
+                sleep($retryDelay * $attempt);
             }
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Gemini API error: ' . $e->getMessage());
-            return null;
         }
+
+        return $this->getFallbackResponse($question, $fullContext);
     }
 
     /**
@@ -1194,6 +1361,55 @@ class QAPairController extends Controller
     }
 
     /**
+     * Get fallback response when AI APIs fail
+     */
+    private function getFallbackResponse($question, $fullContext = null)
+    {
+        $question = strtolower($question);
+
+        // Use context to provide better fallback responses
+        if ($fullContext && isset($fullContext['user_intent'])) {
+            $intent = $fullContext['user_intent'];
+
+            switch ($intent) {
+                case 'customer_need':
+                    return "I understand you're looking for website or app development services. While I'm experiencing some technical difficulties, I'd be happy to connect you with our team for a detailed discussion about your project needs. Please contact us through our contact page for immediate assistance.";
+
+                case 'service_inquiry':
+                    return "We offer comprehensive web development, mobile app development, UI/UX design, and digital marketing services. For detailed information about our services, please contact our team directly through our contact page.";
+
+                case 'pricing_inquiry':
+                    return "For accurate pricing information tailored to your specific project requirements, please contact our team directly. We provide customized quotes based on your needs and budget.";
+
+                case 'project_discussion':
+                    return "I'd love to discuss your project in detail. Please contact our team through our contact page, and we'll schedule a consultation to understand your requirements better.";
+
+                case 'follow_up':
+                    return "I'm experiencing some technical difficulties right now, but I want to make sure you get the information you need. Please contact our team directly for immediate assistance.";
+
+                default:
+                    return "I'm currently experiencing some technical difficulties, but I'm here to help. Please contact our team directly through our contact page for immediate assistance with your inquiry.";
+            }
+        }
+
+        // Default fallback responses based on keywords
+        if (strpos($question, 'website') !== false || strpos($question, 'web') !== false) {
+            return "We specialize in website development and redesign services. For detailed information about our web development capabilities, please contact our team directly.";
+        }
+
+        if (strpos($question, 'app') !== false || strpos($question, 'mobile') !== false) {
+            return "We provide mobile app development services for both iOS and Android. Contact our team for detailed information about our mobile development capabilities.";
+        }
+
+        if (strpos($question, 'price') !== false || strpos($question, 'cost') !== false) {
+            return "For accurate pricing information, please contact our team directly. We provide customized quotes based on your specific project requirements.";
+        }
+
+        // Generic fallback
+        return "I'm currently experiencing some technical difficulties, but I'm here to help. Please contact our team directly through our contact page for immediate assistance with your inquiry.";
+    }
+
+    /**
      * Store AI response in database for learning purposes
      */
     private function storeAIResponseForLearning($question, $answer)
@@ -1215,10 +1431,74 @@ class QAPairController extends Controller
                 ]);
 
                 Log::info('AI response stored for learning: ' . $question);
+
+                // Also store conversation context for better learning
+                $this->storeConversationContext($question, $answer);
+            } else {
+                // Increment usage count for existing learned response
+                $existingPair->incrementUsage();
             }
         } catch (\Exception $e) {
             Log::error('Error storing AI response for learning: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Store conversation context for better AI learning
+     */
+    private function storeConversationContext($question, $answer)
+    {
+        try {
+            // Store additional context about the conversation
+            $contextData = [
+                'question_type' => $this->categorizeQuestion($question),
+                'answer_quality' => $this->assessAnswerQuality($answer),
+                'timestamp' => now(),
+                'source' => 'ai_generated'
+            ];
+
+            // You can extend this to store more context in a separate table if needed
+            Log::info('Conversation context stored: ' . json_encode($contextData));
+        } catch (\Exception $e) {
+            Log::error('Error storing conversation context: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Categorize question for better learning
+     */
+    private function categorizeQuestion($question)
+    {
+        $question = strtolower($question);
+
+        if (strpos($question, 'website') !== false) return 'website_related';
+        if (strpos($question, 'app') !== false || strpos($question, 'mobile') !== false) return 'mobile_related';
+        if (strpos($question, 'price') !== false || strpos($question, 'cost') !== false) return 'pricing_related';
+        if (strpos($question, 'service') !== false) return 'service_related';
+        if (strpos($question, 'project') !== false) return 'project_related';
+        if (strpos($question, 'design') !== false) return 'design_related';
+        if (strpos($question, 'seo') !== false) return 'seo_related';
+
+        return 'general_inquiry';
+    }
+
+    /**
+     * Assess answer quality for learning improvement
+     */
+    private function assessAnswerQuality($answer)
+    {
+        $quality = 'good';
+
+        // Check answer length and completeness
+        if (strlen($answer) < 50) $quality = 'short';
+        if (strlen($answer) > 500) $quality = 'long';
+
+        // Check for contact suggestions (indicates incomplete answer)
+        if (strpos($answer, 'contact') !== false && strpos($answer, 'team') !== false) {
+            $quality = 'requires_contact';
+        }
+
+        return $quality;
     }
 
     /**

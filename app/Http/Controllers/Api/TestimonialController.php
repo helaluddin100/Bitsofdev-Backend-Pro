@@ -65,7 +65,7 @@ class TestimonialController extends Controller
                     'has_more' => $testimonials->hasMorePages()
                 ],
                 'meta' => [
-                    'average_rating' => Testimonial::getAverageRating(),
+                    'average_rating' => round(Testimonial::getAverageRating(), 1),
                     'total_count' => Testimonial::getTotalCount(),
                     'rating_distribution' => Testimonial::getRatingDistribution(),
                     'project_type_distribution' => Testimonial::getProjectTypeDistribution()
@@ -103,7 +103,7 @@ class TestimonialController extends Controller
                     'has_more' => $testimonials->hasMorePages()
                 ],
                 'meta' => [
-                    'average_rating' => Testimonial::getAverageRating(),
+                    'average_rating' => round(Testimonial::getAverageRating(), 1),
                     'total_count' => Testimonial::getTotalCount(),
                     'rating_distribution' => Testimonial::getRatingDistribution(),
                     'project_type_distribution' => Testimonial::getProjectTypeDistribution()

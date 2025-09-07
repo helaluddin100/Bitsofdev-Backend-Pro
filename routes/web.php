@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AboutController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\VisitorDataController;
 use App\Http\Controllers\Admin\ContactController;
+use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\HomeController;
@@ -113,6 +114,13 @@ Route::namespace('App\Http\Controllers')->group(function () {
         // Contact Management
         Route::resource('contacts', ContactController::class);
         Route::get('contacts/export', [ContactController::class, 'export'])->name('contacts.export');
+
+        // Testimonial Management
+        Route::resource('testimonials', TestimonialController::class);
+        Route::post('testimonials/{testimonial}/toggle-status', [TestimonialController::class, 'toggleStatus'])->name('testimonials.toggle-status');
+        Route::post('testimonials/{testimonial}/toggle-featured', [TestimonialController::class, 'toggleFeatured'])->name('testimonials.toggle-featured');
+        Route::post('testimonials/bulk-action', [TestimonialController::class, 'bulkAction'])->name('testimonials.bulk-action');
+        Route::get('testimonials/export', [TestimonialController::class, 'export'])->name('testimonials.export');
     });
 
     // AI Chatbot Admin Routes

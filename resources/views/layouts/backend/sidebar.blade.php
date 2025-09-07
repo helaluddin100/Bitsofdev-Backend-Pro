@@ -148,6 +148,32 @@
                 </a>
             </li>
 
+            <!-- Testimonials Management -->
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="collapse" href="#testimonials-management" role="button"
+                    aria-expanded="false" aria-controls="testimonials-management">
+                    <i class="link-icon" data-feather="message-square"></i>
+                    <span class="link-title">Testimonials</span>
+                    <i class="link-arrow" data-feather="chevron-down"></i>
+                </a>
+                <div class="collapse" id="testimonials-management">
+                    <ul class="nav sub-menu">
+                        <li class="nav-item">
+                            <a href="{{ route('admin.testimonials.index') }}" class="nav-link">All Testimonials</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.testimonials.create') }}" class="nav-link">Add Testimonial</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.testimonials.index', ['status' => 'featured']) }}" class="nav-link">Featured</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.testimonials.index', ['status' => 'pending']) }}" class="nav-link">Pending Review</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
             <!-- AI Chatbot Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#ai-chatbot-management" role="button"

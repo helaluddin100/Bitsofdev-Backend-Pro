@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\PricingController;
 use App\Http\Controllers\Api\AboutController;
 use App\Http\Controllers\Api\VisitorController;
 use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\QAPairController;
 
 // Public routes (no authentication required)
@@ -86,6 +87,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/admin/contacts/{contact}', [ContactController::class, 'update']);
     Route::delete('/admin/contacts/{contact}', [ContactController::class, 'destroy']);
     Route::get('/admin/contacts/statistics', [ContactController::class, 'statistics']);
+});
+
+// Testimonials API Routes
+Route::get('/testimonials', [TestimonialController::class, 'index']);
+Route::get('/testimonials/featured', [TestimonialController::class, 'featured']);
+Route::get('/testimonials/project-type/{projectType}', [TestimonialController::class, 'byProjectType']);
+Route::get('/testimonials/statistics', [TestimonialController::class, 'statistics']);
+Route::get('/testimonials/project-types', [TestimonialController::class, 'projectTypes']);
+Route::get('/testimonials/{id}', [TestimonialController::class, 'show']);
+Route::post('/testimonials', [TestimonialController::class, 'store']);
+
+// Admin Testimonials API Routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('admin/testimonials', TestimonialController::class);
+    Route::post('admin/testimonials/{testimonial}/toggle-status', [TestimonialController::class, 'toggleStatus']);
+    Route::post('admin/testimonials/{testimonial}/toggle-featured', [TestimonialController::class, 'toggleFeatured']);
+    Route::post('admin/testimonials/bulk-action', [TestimonialController::class, 'bulkAction']);
+    Route::get('admin/testimonials/export', [TestimonialController::class, 'export']);
 });
 
 // AI Chatbot API Routes

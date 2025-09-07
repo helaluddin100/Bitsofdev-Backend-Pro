@@ -83,18 +83,31 @@ class TestimonialController extends Controller
     /**
      * Display featured testimonials.
      */
-    public function featured(): JsonResponse
+    public function featured(Request $request): JsonResponse
     {
         try {
+            $perPage = $request->get('per_page', 6);
             $testimonials = Testimonial::active()
                 ->featured()
                 ->ordered()
-                ->limit(6)
-                ->get();
+                ->paginate($perPage);
 
             return response()->json([
                 'success' => true,
-                'data' => $testimonials
+                'data' => $testimonials->items(),
+                'pagination' => [
+                    'current_page' => $testimonials->currentPage(),
+                    'last_page' => $testimonials->lastPage(),
+                    'per_page' => $testimonials->perPage(),
+                    'total' => $testimonials->total(),
+                    'has_more' => $testimonials->hasMorePages()
+                ],
+                'meta' => [
+                    'average_rating' => Testimonial::getAverageRating(),
+                    'total_count' => Testimonial::getTotalCount(),
+                    'rating_distribution' => Testimonial::getRatingDistribution(),
+                    'project_type_distribution' => Testimonial::getProjectTypeDistribution()
+                ]
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching featured testimonials: ' . $e->getMessage());

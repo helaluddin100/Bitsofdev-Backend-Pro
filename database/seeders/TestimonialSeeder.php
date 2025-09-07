@@ -103,12 +103,15 @@ class TestimonialSeeder extends Seeder
             $role = $faker->randomElement($roles);
             $company = $faker->randomElement($companies);
 
+            // 95% chance of 5-star rating, 5% chance of random rating (3-4 stars)
+            $rating = $faker->boolean(95) ? 5 : $faker->numberBetween(3, 4);
+
             $testimonials[] = [
                 'name' => $faker->name(),
                 'role' => $role,
                 'company' => $company,
-                'content' => $this->generateTestimonialContent($projectType, $faker),
-                'rating' => $faker->numberBetween(4, 5), // Mostly 4-5 star ratings
+                'content' => $this->generateTestimonialContent($projectType, $faker, $rating),
+                'rating' => $rating,
                 'project_type' => $projectType,
                 'project_name' => $this->generateProjectName($projectType, $faker),
                 'location' => $faker->city() . ', ' . $faker->stateAbbr(),
@@ -130,16 +133,18 @@ class TestimonialSeeder extends Seeder
         }
     }
 
-    private function generateTestimonialContent($projectType, $faker)
+    private function generateTestimonialContent($projectType, $faker, $rating = 5)
     {
-        $templates = [
-            'web-development' => [
-                'BitsOfDev created an amazing website that perfectly represents our brand. The user experience is outstanding and the performance is incredible.',
-                'Our new website has transformed our online presence. The team understood our vision and delivered beyond our expectations.',
-                'The website they built for us is not only beautiful but also highly functional. Our conversion rates have increased significantly.',
-                'Professional, creative, and technically excellent. They delivered a website that exceeded all our requirements.',
-                'The responsive design and user interface are perfect. Our customers love the new website experience.'
-            ],
+        // Different templates based on rating
+        if ($rating >= 5) {
+            $templates = [
+                'web-development' => [
+                    'BitsOfDev created an amazing website that perfectly represents our brand. The user experience is outstanding and the performance is incredible.',
+                    'Our new website has transformed our online presence. The team understood our vision and delivered beyond our expectations.',
+                    'The website they built for us is not only beautiful but also highly functional. Our conversion rates have increased significantly.',
+                    'Professional, creative, and technically excellent. They delivered a website that exceeded all our requirements.',
+                    'The responsive design and user interface are perfect. Our customers love the new website experience.'
+                ],
             'mobile-app' => [
                 'The mobile app they developed has been a game-changer for our business. User engagement has increased dramatically.',
                 'Outstanding mobile app development. The app is intuitive, fast, and exactly what we envisioned.',
@@ -190,6 +195,67 @@ class TestimonialSeeder extends Seeder
                 'Great experience working with BitsOfDev. They understood our needs and delivered excellent results.'
             ]
         ];
+        } else {
+            // Templates for lower ratings (3-4 stars)
+            $templates = [
+                'web-development' => [
+                    'The website development was good overall. There were some minor issues but they were resolved quickly.',
+                    'Decent work on our website. The team was professional and delivered what was promised.',
+                    'The website meets our basic requirements. Some features could be improved but overall satisfied.',
+                    'Good website development experience. The team was responsive and addressed our concerns.',
+                    'The website works well for our needs. There were some delays but the final result is acceptable.'
+                ],
+                'mobile-app' => [
+                    'The mobile app development was satisfactory. The app works as expected with minor issues.',
+                    'Good mobile app development. The team delivered on time and the app functions well.',
+                    'The mobile app meets our requirements. Some features could be enhanced but overall good work.',
+                    'Decent mobile app development experience. The team was professional and responsive.',
+                    'The mobile app works for our business needs. There were some challenges but they were resolved.'
+                ],
+                'ui-ux-design' => [
+                    'The design work was good. The interface is functional and meets our requirements.',
+                    'Decent UI/UX design work. The team understood our needs and delivered accordingly.',
+                    'Good design experience. The final product is clean and user-friendly.',
+                    'The design meets our expectations. Some improvements could be made but overall satisfied.',
+                    'Professional design work. The team delivered what was requested on time.'
+                ],
+                'e-commerce' => [
+                    'The e-commerce platform works well for our business. Some features could be enhanced.',
+                    'Good e-commerce development. The platform handles our transactions smoothly.',
+                    'Decent e-commerce solution. The team delivered a functional platform for our needs.',
+                    'The e-commerce site meets our requirements. Overall satisfied with the development.',
+                    'Good e-commerce development experience. The platform works as expected.'
+                ],
+                'consulting' => [
+                    'The consulting services were helpful. The team provided good insights for our project.',
+                    'Decent consulting experience. The team was knowledgeable and provided useful advice.',
+                    'Good consulting services. The team helped us make informed decisions.',
+                    'The consulting was valuable for our project. Some recommendations were very helpful.',
+                    'Professional consulting services. The team delivered what was promised.'
+                ],
+                'seo' => [
+                    'The SEO work has been helpful. We\'ve seen some improvements in our rankings.',
+                    'Good SEO services. The team provided useful strategies for our website.',
+                    'Decent SEO work. We\'ve noticed some positive changes in our search visibility.',
+                    'The SEO services meet our expectations. The team was professional and responsive.',
+                    'Good SEO experience. The team delivered on their promises.'
+                ],
+                'digital-marketing' => [
+                    'The digital marketing campaigns have been effective. We\'ve seen some good results.',
+                    'Good digital marketing services. The team created engaging campaigns for our brand.',
+                    'Decent digital marketing work. The campaigns have helped increase our online presence.',
+                    'The digital marketing meets our needs. The team was professional and delivered results.',
+                    'Good digital marketing experience. The campaigns have been beneficial for our business.'
+                ],
+                'other' => [
+                    'Good work on our project. The team delivered what was requested.',
+                    'Decent project experience. The team was professional and met our requirements.',
+                    'The project was completed satisfactorily. Some improvements could be made but overall good.',
+                    'Good project delivery. The team was responsive and addressed our needs.',
+                    'Professional project work. The team delivered on time and within budget.'
+                ]
+            ];
+        }
 
         $templateList = $templates[$projectType] ?? $templates['other'];
         return $faker->randomElement($templateList);

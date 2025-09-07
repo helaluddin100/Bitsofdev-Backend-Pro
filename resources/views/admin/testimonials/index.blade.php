@@ -173,27 +173,27 @@
                             <!-- Testimonials Table -->
                             <div class="table-responsive">
                                 <table class="table table-hover">
-                                    <thead>
+                                    <thead class="table-light">
                                         <tr>
-                                            <th>
-                                                <input type="checkbox" id="select-all">
+                                            <th width="50">
+                                                <input type="checkbox" id="select-all" class="form-check-input">
                                             </th>
-                                            <th>ID</th>
+                                            <th width="60">ID</th>
                                             <th>Client</th>
-                                            <th>Rating</th>
-                                            <th>Project</th>
-                                            <th>Status</th>
-                                            <th>Featured</th>
-                                            <th>Verified</th>
-                                            <th>Created</th>
-                                            <th>Actions</th>
+                                            <th width="120">Rating</th>
+                                            <th width="150">Project</th>
+                                            <th width="100">Status</th>
+                                            <th width="100">Featured</th>
+                                            <th width="100">Verified</th>
+                                            <th width="120">Created</th>
+                                            <th width="200">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @forelse($testimonials as $testimonial)
                                         <tr>
                                             <td>
-                                                <input type="checkbox" name="testimonials[]" value="{{ $testimonial->id }}" class="testimonial-checkbox">
+                                                <input type="checkbox" name="testimonials[]" value="{{ $testimonial->id }}" class="testimonial-checkbox form-check-input">
                                             </td>
                                             <td>{{ $testimonial->id }}</td>
                                             <td>
@@ -278,9 +278,16 @@
                         </form>
 
                         <!-- Pagination -->
-                        <div class="d-flex justify-content-center">
-                            {{ $testimonials->links() }}
+                        @if($testimonials->hasPages())
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <div class="text-muted">
+                                Showing {{ $testimonials->firstItem() }} to {{ $testimonials->lastItem() }} of {{ $testimonials->total() }} results
+                            </div>
+                            <nav aria-label="Testimonials pagination">
+                                {{ $testimonials->appends(request()->query())->links('pagination::bootstrap-4') }}
+                            </nav>
                         </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -289,6 +296,93 @@
 @endsection
 
 @section('js')
+<style>
+.table-responsive {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    color: #495057;
+    padding: 12px 8px;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.table tbody td {
+    padding: 12px 8px;
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.badge {
+    font-size: 0.75em;
+    padding: 0.375rem 0.75rem;
+}
+
+.btn-group .btn {
+    margin-right: 2px;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+
+.pagination {
+    margin-bottom: 0;
+}
+
+.pagination .page-link {
+    color: #007bff;
+    border: 1px solid #dee2e6;
+    padding: 0.5rem 0.75rem;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.pagination .page-link:hover {
+    color: #0056b3;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.info-box {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+}
+
+.info-box .rounded-3 {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.info-box h4 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.info-box p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+</style>
 <script>
 // Select All Checkbox
 document.getElementById('select-all').addEventListener('change', function() {

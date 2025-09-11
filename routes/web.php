@@ -153,6 +153,9 @@ Route::namespace('App\Http\Controllers')->group(function () {
     });
 });
 
+// Marketing Campaign Routes
+require __DIR__.'/marketing.php';
+
 // ================================user AND ROUTE=============
 Route::namespace('App\Http\Controllers')->group(
     function () {

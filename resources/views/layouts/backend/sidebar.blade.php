@@ -206,6 +206,68 @@
                 </div>
             </li>
 
+            <!-- Marketing Campaign Management -->
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="collapse" href="#marketing-management" role="button"
+                    aria-expanded="false" aria-controls="marketing-management">
+                    <i class="link-icon" data-feather="mail"></i>
+                    <span class="link-title">Marketing Campaigns</span>
+                    <i class="link-arrow" data-feather="chevron-down"></i>
+                </a>
+                <div class="collapse" id="marketing-management">
+                    <ul class="nav sub-menu">
+                        <li class="nav-item">
+                            <a href="{{ route('admin.marketing.dashboard') }}" class="nav-link">
+                                <i class="link-icon" data-feather="trending-up"></i>
+                                <span class="link-title">Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.marketing.leads.index') }}" class="nav-link">
+                                <i class="link-icon" data-feather="users"></i>
+                                <span class="link-title">Leads Management</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.marketing.leads.create') }}" class="nav-link">
+                                <i class="link-icon" data-feather="user-plus"></i>
+                                <span class="link-title">Add Lead</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.marketing.leads.import.form') }}" class="nav-link">
+                                <i class="link-icon" data-feather="upload"></i>
+                                <span class="link-title">Import Leads</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.marketing.campaigns.index') }}" class="nav-link">
+                                <i class="link-icon" data-feather="send"></i>
+                                <span class="link-title">Campaigns</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.marketing.campaigns.create') }}" class="nav-link">
+                                <i class="link-icon" data-feather="plus-circle"></i>
+                                <span class="link-title">Create Campaign</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.marketing.responses.index') }}" class="nav-link">
+                                <i class="link-icon" data-feather="message-circle"></i>
+                                <span class="link-title">Responses</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.marketing.analytics.leads') }}" class="nav-link">
+                                <i class="link-icon" data-feather="bar-chart"></i>
+                                <span class="link-title">Analytics</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
             <li class="nav-item nav-category">System</li>
 
             <!-- User Management -->

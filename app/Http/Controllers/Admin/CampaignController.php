@@ -66,7 +66,8 @@ class CampaignController extends Controller
     public function create()
     {
         $categories = Category::active()->get();
-        return view('admin.marketing.campaigns.create', compact('categories'));
+        $leads = Lead::where('is_active', true)->orderBy('name')->get();
+        return view('admin.marketing.campaigns.create', compact('categories', 'leads'));
     }
 
     /**
@@ -85,11 +86,16 @@ class CampaignController extends Controller
             'enable_reminders' => 'boolean',
             'reminder_1_days' => 'nullable|integer|min:1|max:30',
             'reminder_2_days' => 'nullable|integer|min:1|max:30',
+            'reminder_3_days' => 'nullable|integer|min:1|max:30',
             'reminder_1_subject' => 'nullable|string|max:255',
             'reminder_1_body' => 'nullable|string',
             'reminder_2_subject' => 'nullable|string|max:255',
             'reminder_2_body' => 'nullable|string',
-            'notes' => 'nullable|string'
+            'reminder_3_subject' => 'nullable|string|max:255',
+            'reminder_3_body' => 'nullable|string',
+            'notes' => 'nullable|string',
+            'lead_ids' => 'nullable|array',
+            'lead_ids.*' => 'exists:leads,id'
         ]);
 
         if ($validator->fails()) {
@@ -100,8 +106,26 @@ class CampaignController extends Controller
 
         $campaign = Campaign::create($request->all());
 
+        // Attach selected leads to campaign
+        if ($request->has('lead_ids') && is_array($request->lead_ids)) {
+            $leadIds = array_filter($request->lead_ids);
+            if (!empty($leadIds)) {
+                foreach ($leadIds as $leadId) {
+                    $lead = Lead::find($leadId);
+                    if ($lead && !$campaign->leads()->where('lead_id', $leadId)->exists()) {
+                        $campaign->leads()->attach($leadId, [
+                            'status' => 'fresh',
+                            'email_address' => $lead->email
+                        ]);
+                    }
+                }
+                // Update campaign stats
+                $campaign->updateStats();
+            }
+        }
+
         return redirect()->route('admin.marketing.campaigns.show', $campaign)
-            ->with('success', 'Campaign created successfully.');
+            ->with('success', 'Campaign created successfully. You can now send the campaign using the "Send Campaign" button.');
     }
 
     /**
@@ -120,6 +144,7 @@ class CampaignController extends Controller
             'sent' => $campaign->getSentLeads(),
             'reminder_1' => $campaign->getLeadsByStatus('reminder_1'),
             'reminder_2' => $campaign->getLeadsByStatus('reminder_2'),
+            'reminder_3' => $campaign->getLeadsByStatus('reminder_3'),
             'responded' => $campaign->getRespondedLeads()
         ];
 
@@ -259,18 +284,47 @@ class CampaignController extends Controller
      */
     public function send(Campaign $campaign)
     {
-        if (!$campaign->canBeSent()) {
+        // Check if campaign has leads
+        if ($campaign->leads()->count() === 0) {
             return redirect()->back()
-                ->with('error', 'Campaign cannot be sent at this time.');
+                ->with('error', 'Campaign has no leads. Please add leads first.');
         }
 
-        // Dispatch job to send campaign
-        \App\Jobs\SendCampaignJob::dispatch($campaign);
+        // Check if campaign is already sent or sending
+        if (in_array($campaign->status, ['sending', 'sent', 'completed'])) {
+            return redirect()->back()
+                ->with('error', 'Campaign is already sent or being sent.');
+        }
 
+        // Get all fresh leads for this campaign
+        $freshLeads = $campaign->campaignLeads()
+            ->where('status', 'fresh')
+            ->get();
+
+        if ($freshLeads->count() === 0) {
+            return redirect()->back()
+                ->with('error', 'No fresh leads to send. All leads have already been sent.');
+        }
+
+        // Update campaign status to sending
         $campaign->update(['status' => 'sending']);
 
+        // Dispatch jobs for each fresh lead
+        $dispatchedCount = 0;
+        foreach ($freshLeads as $campaignLead) {
+            try {
+                \App\Jobs\SendCampaignEmail::dispatch($campaignLead);
+                $dispatchedCount++;
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to dispatch email job for CampaignLead ID: {$campaignLead->id}. Error: {$e->getMessage()}");
+            }
+        }
+
+        // Update campaign stats
+        $campaign->updateStats();
+
         return redirect()->back()
-            ->with('success', 'Campaign is being sent. You will be notified when complete.');
+            ->with('success', "Campaign sending started. {$dispatchedCount} email(s) queued for sending.");
     }
 
     /**
@@ -387,5 +441,45 @@ class CampaignController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Toggle reminders on/off
+     */
+    public function toggleReminders(Campaign $campaign)
+    {
+        $campaign->update([
+            'enable_reminders' => !$campaign->enable_reminders,
+            'reminders_enabled' => !$campaign->reminders_enabled
+        ]);
+
+        $status = $campaign->enable_reminders ? 'enabled' : 'disabled';
+        return redirect()->back()
+            ->with('success', "Reminders {$status} successfully.");
+    }
+
+    /**
+     * Remove lead from reminders
+     */
+    public function removeFromReminders(Campaign $campaign, Lead $lead)
+    {
+        $campaignLead = CampaignLead::where('campaign_id', $campaign->id)
+            ->where('lead_id', $lead->id)
+            ->first();
+
+        if ($campaignLead) {
+            // Reset reminder status but keep sent status
+            if (in_array($campaignLead->status, ['reminder_1', 'reminder_2', 'reminder_3'])) {
+                $campaignLead->update([
+                    'status' => 'sent',
+                    'reminder_1_sent_at' => null,
+                    'reminder_2_sent_at' => null,
+                    'reminder_3_sent_at' => null
+                ]);
+            }
+        }
+
+        return redirect()->back()
+            ->with('success', 'Lead removed from reminders.');
     }
 }

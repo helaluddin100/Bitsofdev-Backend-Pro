@@ -264,6 +264,13 @@
                                 <span class="link-title">Analytics</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.marketing.jobs.index') }}" class="nav-link">
+                                <i class="link-icon" data-feather="activity"></i>
+                                <span class="link-title">Email Jobs Status</span>
+                                <span class="badge badge-danger" id="failedJobsBadge" style="display: none;">0</span>
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </li>
@@ -300,3 +307,37 @@
         </ul>
     </div>
 </nav>
+
+@push('scripts')
+<script>
+    // Update failed jobs badge count
+    function updateFailedJobsBadge() {
+        $.ajax({
+            url: '{{ route("admin.marketing.jobs.data") }}',
+            method: 'GET',
+            success: function(response) {
+                const failedCount = (response.stats && response.stats.failed) ? response.stats.failed : 0;
+                const badge = $('#failedJobsBadge');
+                if (failedCount > 0) {
+                    badge.text(failedCount).show();
+                } else {
+                    badge.hide();
+                }
+            },
+            error: function() {
+                // Silently fail - don't show badge if API fails
+                $('#failedJobsBadge').hide();
+            }
+        });
+    }
+
+    // Update badge every 30 seconds
+    $(document).ready(function() {
+        // Only update if we're on a page that has the badge
+        if ($('#failedJobsBadge').length > 0) {
+            updateFailedJobsBadge();
+            setInterval(updateFailedJobsBadge, 30000);
+        }
+    });
+</script>
+@endpush

@@ -108,7 +108,18 @@
                             </td>
                             <td>{{ Str::limit($campaign->email_subject, 40) }}</td>
                             <td>
-                                <span class="badge badge-{{ $this->getStatusBadgeColor($campaign->status) }}">
+                                @php
+                                    $badgeColor = match($campaign->status) {
+                                        'draft' => 'secondary',
+                                        'scheduled' => 'info',
+                                        'sending' => 'warning',
+                                        'sent' => 'success',
+                                        'paused' => 'danger',
+                                        'completed' => 'primary',
+                                        default => 'secondary'
+                                    };
+                                @endphp
+                                <span class="badge badge-{{ $badgeColor }}">
                                     {{ ucfirst($campaign->status) }}
                                 </span>
                             </td>
@@ -199,17 +210,3 @@
 // Add any JavaScript functionality here
 </script>
 @endpush
-
-@php
-function getStatusBadgeColor($status) {
-    return match($status) {
-        'draft' => 'secondary',
-        'scheduled' => 'info',
-        'sending' => 'warning',
-        'sent' => 'success',
-        'paused' => 'danger',
-        'completed' => 'primary',
-        default => 'secondary'
-    };
-}
-@endphp

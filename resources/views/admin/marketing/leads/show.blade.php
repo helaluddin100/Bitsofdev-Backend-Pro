@@ -252,6 +252,108 @@
             </div>
         </div>
     </div>
+
+    <!-- Campaigns Section -->
+    @if($lead->campaigns && $lead->campaigns->count() > 0)
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Associated Campaigns ({{ $lead->campaigns->count() }})</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Campaign Name</th>
+                                    <th>Category</th>
+                                    <th>Status</th>
+                                    <th>Email Sent</th>
+                                    <th>Reminder 1</th>
+                                    <th>Reminder 2</th>
+                                    <th>Reminder 3</th>
+                                    <th>Responded</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($lead->campaigns as $campaign)
+                                <tr>
+                                    <td>
+                                        <a href="{{ route('admin.marketing.campaigns.show', $campaign) }}">
+                                            {{ $campaign->name }}
+                                        </a>
+                                    </td>
+                                    <td><span class="badge badge-info">{{ $campaign->category }}</span></td>
+                                    <td>
+                                        @php
+                                            $status = $campaign->pivot->status ?? 'fresh';
+                                            $badgeColor = match($status) {
+                                                'fresh' => 'secondary',
+                                                'sent' => 'success',
+                                                'reminder_1' => 'warning',
+                                                'reminder_2' => 'warning',
+                                                'reminder_3' => 'warning',
+                                                'responded' => 'primary',
+                                                default => 'secondary'
+                                            };
+                                        @endphp
+                                        <span class="badge badge-{{ $badgeColor }}">{{ ucfirst($status) }}</span>
+                                    </td>
+                                    <td>
+                                        @if($campaign->pivot->sent_at)
+                                            {{ \Carbon\Carbon::parse($campaign->pivot->sent_at)->format('M d, Y h:i A') }}
+                                        @else
+                                            <span class="text-muted">Not sent</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($campaign->pivot->reminder_1_sent_at)
+                                            {{ \Carbon\Carbon::parse($campaign->pivot->reminder_1_sent_at)->format('M d, Y') }}
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($campaign->pivot->reminder_2_sent_at)
+                                            {{ \Carbon\Carbon::parse($campaign->pivot->reminder_2_sent_at)->format('M d, Y') }}
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if(isset($campaign->pivot->reminder_3_sent_at) && $campaign->pivot->reminder_3_sent_at)
+                                            {{ \Carbon\Carbon::parse($campaign->pivot->reminder_3_sent_at)->format('M d, Y') }}
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($campaign->pivot->responded_at)
+                                            <span class="badge badge-success">
+                                                {{ \Carbon\Carbon::parse($campaign->pivot->responded_at)->format('M d, Y') }}
+                                            </span>
+                                        @else
+                                            <span class="text-muted">No</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('admin.marketing.campaigns.show', $campaign) }}" 
+                                           class="btn btn-sm btn-info" title="View Campaign">
+                                            <i data-feather="eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 @endsection
 

@@ -46,7 +46,10 @@ class Campaign extends Model
         'reminder_subject_2',
         'reminder_2_subject',
         'reminder_body_2',
-        'reminder_2_body'
+        'reminder_2_body',
+        'reminder_3_days',
+        'reminder_3_subject',
+        'reminder_3_body'
     ];
 
     protected $casts = [
@@ -287,6 +290,10 @@ class Campaign extends Model
             return $this->reminder_2_subject ?? $this->reminder_subject_2 ?? 'Final Follow-up: ' . $this->email_subject;
         }
 
+        if ($reminderNumber === 3) {
+            return $this->reminder_3_subject ?? 'Last Reminder: ' . $this->email_subject;
+        }
+
         return $this->email_subject;
     }
 
@@ -301,6 +308,10 @@ class Campaign extends Model
 
         if ($reminderNumber === 2) {
             return $this->reminder_2_body ?? $this->reminder_body_2 ?? $this->email_body;
+        }
+
+        if ($reminderNumber === 3) {
+            return $this->reminder_3_body ?? $this->email_body;
         }
 
         return $this->email_body;

@@ -44,6 +44,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin/marketing')->name('admin.mar
     Route::post('campaigns/{campaign}/duplicate', [CampaignController::class, 'duplicate'])->name('campaigns.duplicate');
     Route::get('campaigns/{campaign}/performance', [CampaignController::class, 'performance'])->name('campaigns.performance');
     Route::get('campaigns/{campaign}/export', [CampaignController::class, 'export'])->name('campaigns.export');
+    Route::post('campaigns/{campaign}/toggle-reminders', [CampaignController::class, 'toggleReminders'])->name('campaigns.toggle-reminders');
+    Route::post('campaigns/{campaign}/leads/{lead}/remove-from-reminders', [CampaignController::class, 'removeFromReminders'])->name('campaigns.remove-from-reminders');
 
     // Response Management
     Route::resource('responses', ResponseController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);
@@ -52,6 +54,15 @@ Route::middleware(['auth', 'admin'])->prefix('admin/marketing')->name('admin.mar
     Route::post('responses/bulk-update', [ResponseController::class, 'bulkUpdate'])->name('responses.bulk-update');
     Route::get('responses/statistics', [ResponseController::class, 'statistics'])->name('responses.statistics');
     Route::get('responses/export', [ResponseController::class, 'export'])->name('responses.export');
+
+    // Jobs Monitoring
+    Route::get('jobs', [\App\Http\Controllers\Admin\JobMonitorController::class, 'index'])->name('jobs.index');
+    Route::get('jobs/data', [\App\Http\Controllers\Admin\JobMonitorController::class, 'getJobs'])->name('jobs.data');
+    Route::post('jobs/{id}/retry', [\App\Http\Controllers\Admin\JobMonitorController::class, 'retry'])->name('jobs.retry');
+    Route::delete('jobs/failed/{id}', [\App\Http\Controllers\Admin\JobMonitorController::class, 'deleteFailed'])->name('jobs.delete-failed');
+    // Failed Emails
+    Route::post('jobs/failed-email/{id}/resend', [\App\Http\Controllers\Admin\JobMonitorController::class, 'resendFailedEmail'])->name('jobs.resend-failed-email');
+    Route::delete('jobs/failed-email/{id}', [\App\Http\Controllers\Admin\JobMonitorController::class, 'deleteFailedEmail'])->name('jobs.delete-failed-email');
 });
 
 // Public routes for email tracking and unsubscribing

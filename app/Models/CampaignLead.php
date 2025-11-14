@@ -20,6 +20,7 @@ class CampaignLead extends Model
         'sent_at',
         'reminder_1_sent_at',
         'reminder_2_sent_at',
+        'reminder_3_sent_at',
         'responded_at',
         'bounced_at',
         'unsubscribed_at',
@@ -36,6 +37,7 @@ class CampaignLead extends Model
         'sent_at' => 'datetime',
         'reminder_1_sent_at' => 'datetime',
         'reminder_2_sent_at' => 'datetime',
+        'reminder_3_sent_at' => 'datetime',
         'responded_at' => 'datetime',
         'bounced_at' => 'datetime',
         'unsubscribed_at' => 'datetime',
@@ -115,6 +117,18 @@ class CampaignLead extends Model
     }
 
     /**
+     * Scope for leads ready for reminder 3
+     */
+    public function scopeReadyForReminder3($query, $days = 10)
+    {
+        $cutoffDate = now()->subDays($days);
+
+        return $query->where('status', 'reminder_2')
+                    ->where('reminder_2_sent_at', '<=', $cutoffDate)
+                    ->whereNull('reminder_3_sent_at');
+    }
+
+    /**
      * Mark as sent
      */
     public function markAsSent($emailAddress = null, $emailSubject = null, $emailBody = null)
@@ -150,6 +164,17 @@ class CampaignLead extends Model
         $this->update([
             'status' => 'reminder_2',
             'reminder_2_sent_at' => now()
+        ]);
+    }
+
+    /**
+     * Mark as reminder 3 sent
+     */
+    public function markAsReminder3Sent()
+    {
+        $this->update([
+            'status' => 'reminder_3',
+            'reminder_3_sent_at' => now()
         ]);
     }
 
@@ -215,6 +240,13 @@ class CampaignLead extends Model
                    !$this->reminder_2_sent_at;
         }
 
+        if ($reminderNumber === 3) {
+            return $this->status === 'reminder_2' &&
+                   $this->reminder_2_sent_at &&
+                   $this->reminder_2_sent_at->addDays($days)->isPast() &&
+                   !$this->reminder_3_sent_at;
+        }
+
         return false;
     }
 
@@ -223,7 +255,8 @@ class CampaignLead extends Model
      */
     public function getDaysSinceLastContact()
     {
-        $lastContact = $this->reminder_2_sent_at ??
+        $lastContact = $this->reminder_3_sent_at ??
+                      $this->reminder_2_sent_at ??
                       $this->reminder_1_sent_at ??
                       $this->sent_at;
 
@@ -236,11 +269,15 @@ class CampaignLead extends Model
     public function getNextReminderDate($reminderNumber, $days)
     {
         if ($reminderNumber === 1) {
-            return $this->sent_at ? $this->sent_at->addDays($days) : null;
+            return $this->sent_at ? $this->sent_at->copy()->addDays($days) : null;
         }
 
         if ($reminderNumber === 2) {
-            return $this->reminder_1_sent_at ? $this->reminder_1_sent_at->addDays($days) : null;
+            return $this->reminder_1_sent_at ? $this->reminder_1_sent_at->copy()->addDays($days) : null;
+        }
+
+        if ($reminderNumber === 3) {
+            return $this->reminder_2_sent_at ? $this->reminder_2_sent_at->copy()->addDays($days) : null;
         }
 
         return null;
@@ -256,6 +293,7 @@ class CampaignLead extends Model
             'sent' => 'primary',
             'reminder_1' => 'warning',
             'reminder_2' => 'info',
+            'reminder_3' => 'warning',
             'responded' => 'success',
             'bounced' => 'danger',
             'unsubscribed' => 'dark',
@@ -273,6 +311,7 @@ class CampaignLead extends Model
             'sent' => 'Sent',
             'reminder_1' => 'Reminder 1',
             'reminder_2' => 'Reminder 2',
+            'reminder_3' => 'Reminder 3',
             'responded' => 'Responded',
             'bounced' => 'Bounced',
             'unsubscribed' => 'Unsubscribed',

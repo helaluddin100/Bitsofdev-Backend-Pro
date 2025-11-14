@@ -97,20 +97,13 @@
         <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <h6 class="m-0 font-weight-bold text-primary">Leads ({{ count($leads) }} total)</h6>
-                <div>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="bulkDelete()">
-                        <i class="fas fa-trash"></i> Delete Selected
-                    </button>
-                </div>
+
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-bordered table-striped" id="dataTableExample">
                         <thead class="thead-dark">
                             <tr>
-                                <th width="5%">
-                                    <input type="checkbox" id="selectAll">
-                                </th>
                                 <th width="20%">Name</th>
                                 <th width="20%">Email</th>
                                 <th width="15%">Phone</th>
@@ -123,9 +116,6 @@
                         <tbody>
                             @forelse($leads as $lead)
                                 <tr>
-                                    <td>
-                                        <input type="checkbox" class="lead-checkbox" value="{{ $lead->id }}">
-                                    </td>
                                     <td>
                                         <a href="{{ route('admin.marketing.leads.show', $lead) }}"
                                             class="text-primary font-weight-bold">
@@ -214,29 +204,7 @@
         </div>
     </div>
 
-    <!-- Bulk Delete Modal -->
-    <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirm Bulk Delete</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to delete the selected leads? This action cannot be undone.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <form method="POST" action="{{ route('admin.marketing.leads.bulk-delete') }}" id="bulkDeleteForm">
-                        @csrf
-                        <button type="submit" class="btn btn-danger">Delete Selected</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+
 @endsection
 
 @push('styles')

@@ -422,4 +422,16 @@ class BlogController extends Controller
 
         return $recommendations;
     }
+
+    /**
+     * Test authentication status
+     */
+    public function testAuth()
+    {
+        return response()->json([
+            'user' => auth()->user() ? auth()->user()->id : 'Not authenticated',
+            'role' => auth()->user() ? auth()->user()->role : 'No role',
+            'timestamp' => now()
+        ]);
+    }
 }

@@ -48,18 +48,18 @@ class SendCampaignJob implements ShouldQueue
             }
 
             // Process leads in batches
-            $freshLeads->chunk($this->batchSize, function ($leads) {
+            $chunks = $freshLeads->chunk($this->batchSize);
+            foreach ($chunks as $leads) {
                 foreach ($leads as $lead) {
                     $this->sendEmailToLead($lead);
                 }
-            });
+            }
 
             // Update campaign status to sent
             $this->campaign->markAsSent();
             $this->campaign->updateStats();
 
             Log::info("Campaign {$this->campaign->id} sent successfully to {$freshLeads->count()} leads.");
-
         } catch (\Exception $e) {
             Log::error("Error sending campaign {$this->campaign->id}: " . $e->getMessage());
             $this->campaign->update(['status' => 'paused']);
@@ -105,7 +105,6 @@ class SendCampaignJob implements ShouldQueue
             $this->campaign->increment('sent_count');
 
             Log::info("Email sent to {$lead->email} for campaign {$this->campaign->id}");
-
         } catch (\Exception $e) {
             Log::error("Error sending email to lead {$lead->id}: " . $e->getMessage());
 

@@ -29,27 +29,9 @@ use Illuminate\Support\Facades\Artisan;
 |
 */
 
-Route::get('/', function () {
-    return redirect('/login');
-});
+Route::get('/', [HomeController::class, 'redirectToLogin']);
 
-Route::get('/clear-cache', function () {
-    // Clear route cache
-    Artisan::call('route:clear');
-
-    // Optimize class loading
-    Artisan::call('optimize');
-
-    // Optimize configuration loading
-    Artisan::call('config:cache');
-
-    // Optimize views loading
-    Artisan::call('view:cache');
-
-    // Additional optimizations you may want to run
-
-    return "Cache cleared and optimizations done successfully.";
-});
+Route::get('/clear-cache', [HomeController::class, 'clearCache']);
 
 
 Auth::routes();
@@ -67,13 +49,7 @@ Route::namespace('App\Http\Controllers')->group(function () {
         Route::get('blogs/test-binding/{id}', [BlogController::class, 'testBinding'])->name('blogs.test-binding');
         Route::get('blogs/test-controller', [BlogController::class, 'testController'])->name('blogs.test-controller');
         Route::get('blogs/debug', [BlogController::class, 'debugBlogs'])->name('blogs.debug');
-        Route::get('blogs/test-auth', function () {
-            return response()->json([
-                'user' => auth()->user() ? auth()->user()->id : 'Not authenticated',
-                'role' => auth()->user() ? auth()->user()->role : 'No role',
-                'timestamp' => now()
-            ]);
-        })->name('blogs.test-auth');
+        Route::get('blogs/test-auth', [BlogController::class, 'testAuth'])->name('blogs.test-auth');
         Route::resource('categories', CategoryController::class);
 
         // Project Management
@@ -100,9 +76,7 @@ Route::namespace('App\Http\Controllers')->group(function () {
         Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
         Route::get('analytics/data', [AnalyticsController::class, 'getData'])->name('analytics.data');
         Route::get('analytics/export', [AnalyticsController::class, 'export'])->name('analytics.export');
-        Route::get('analytics/test', function () {
-            return view('admin.analytics.test');
-        })->name('analytics.test');
+        Route::get('analytics/test', [AnalyticsController::class, 'test'])->name('analytics.test');
 
         // Visitor Data Management
         Route::get('visitors', [VisitorDataController::class, 'index'])->name('visitors.index');
@@ -154,7 +128,7 @@ Route::namespace('App\Http\Controllers')->group(function () {
 });
 
 // Marketing Campaign Routes
-require __DIR__.'/marketing.php';
+require __DIR__ . '/marketing.php';
 
 // ================================user AND ROUTE=============
 Route::namespace('App\Http\Controllers')->group(

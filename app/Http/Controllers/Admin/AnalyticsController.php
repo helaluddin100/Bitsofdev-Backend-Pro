@@ -156,4 +156,12 @@ class AnalyticsController extends Controller
 
         return response()->stream($callback, 200, $headers);
     }
+
+    /**
+     * Test analytics view
+     */
+    public function test()
+    {
+        return view('admin.analytics.test');
+    }
 }

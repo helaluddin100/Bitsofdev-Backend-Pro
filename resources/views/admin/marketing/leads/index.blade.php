@@ -96,7 +96,7 @@
         <!-- Leads Table -->
         <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-primary">Leads ({{ $leads->total() }} total)</h6>
+                <h6 class="m-0 font-weight-bold text-primary">Leads ({{ count($leads) }} total)</h6>
                 <div>
                     <button type="button" class="btn btn-sm btn-danger" onclick="bulkDelete()">
                         <i class="fas fa-trash"></i> Delete Selected
@@ -209,10 +209,7 @@
                     </table>
                 </div>
 
-                <!-- Laravel Pagination (hidden when DataTable is active) -->
-                <div class="d-flex justify-content-center" id="laravelPagination" style="display: none !important;">
-                    {{ $leads->appends(request()->query())->links() }}
-                </div>
+                <!-- Laravel Pagination removed - DataTable handles pagination client-side -->
             </div>
         </div>
     </div>
@@ -380,30 +377,133 @@
 @push('scripts')
     <script>
         $(document).ready(function() {
-            // Select All functionality
-            $('#selectAll').on('change', function() {
-                const checkboxes = $('.lead-checkbox');
-                checkboxes.prop('checked', this.checked);
-            });
+            var table;
+            window.selectedLeads = []; // Store selected lead IDs globally
 
-            // Individual checkbox change
-            $('.lead-checkbox').on('change', function() {
-                const totalCheckboxes = $('.lead-checkbox').length;
-                const checkedCheckboxes = $('.lead-checkbox:checked').length;
-                $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
-            });
-
-            // Wait for DataTable to be initialized by data-table.js
-            setTimeout(function() {
-                if ($.fn.DataTable && $('#dataTableExample').length && $('#dataTableExample').hasClass(
-                        'dataTable')) {
-                    var table = $('#dataTableExample').DataTable();
-
-                    // Disable sorting for checkbox and actions columns
-                    table.column(0).orderable(false);
-                    table.column(7).orderable(false);
+            // Initialize DataTable immediately to prevent auto-initialization by data-table.js
+            if ($.fn.DataTable && $('#dataTableExample').length) {
+                // Destroy existing DataTable if it exists (in case data-table.js already initialized it)
+                if ($.fn.DataTable.isDataTable('#dataTableExample')) {
+                    $('#dataTableExample').DataTable().destroy();
                 }
-            }, 100);
+
+                // Small delay to ensure DOM is ready
+                setTimeout(function() {
+
+                    // Initialize DataTable with custom settings
+                    table = $('#dataTableExample').DataTable({
+                        "aLengthMenu": [
+                            [10, 25, 50, 100, -1],
+                            [10, 25, 50, 100, "All"]
+                        ],
+                        "iDisplayLength": -1, // Show all rows by default
+                        "language": {
+                            search: ""
+                        },
+                        "order": [
+                            [1, "asc"]
+                        ], // Sort by Name column
+                        "columnDefs": [{
+                                "orderable": false,
+                                "targets": [0, 7]
+                            } // Disable sorting for checkbox and actions columns
+                        ]
+                    });
+
+                    // Customize search input
+                    $('#dataTableExample').each(function() {
+                        var datatable = $(this);
+                        // SEARCH - Add the placeholder for Search and Turn this into in-line form control
+                        var search_input = datatable.closest('.dataTables_wrapper').find(
+                            'div[id$=_filter] input');
+                        search_input.attr('placeholder', 'Search');
+                        search_input.removeClass('form-control-sm');
+                        // LENGTH - Inline-Form control
+                        var length_sel = datatable.closest('.dataTables_wrapper').find(
+                            'div[id$=_length] select');
+                        length_sel.removeClass('form-control-sm');
+                    });
+
+                    // Re-initialize checkboxes after DataTable pagination
+                    table.on('draw', function() {
+                        // Restore checkbox states from global array
+                        $('#dataTableExample tbody .lead-checkbox').each(function() {
+                            const leadId = $(this).val();
+                            if (window.selectedLeads.indexOf(leadId) !== -1) {
+                                $(this).prop('checked', true);
+                            } else {
+                                $(this).prop('checked', false);
+                            }
+                        });
+
+                        updateSelectAllState();
+
+                        // Re-initialize Feather icons after pagination
+                        if (typeof feather !== 'undefined') {
+                            feather.replace();
+                        }
+                    });
+                }, 50);
+            }
+
+            // Select All functionality - Use event delegation for DataTable
+            $(document).on('change', '#selectAll', function() {
+                const isChecked = this.checked;
+
+                // Check/uncheck all visible checkboxes
+                $('#dataTableExample tbody .lead-checkbox').each(function() {
+                    $(this).prop('checked', isChecked);
+                    const leadId = $(this).val();
+
+                    if (isChecked) {
+                        // Add to selected array if not already present
+                        if (window.selectedLeads.indexOf(leadId) === -1) {
+                            window.selectedLeads.push(leadId);
+                        }
+                    } else {
+                        // Remove from selected array
+                        const index = window.selectedLeads.indexOf(leadId);
+                        if (index > -1) {
+                            window.selectedLeads.splice(index, 1);
+                        }
+                    }
+                });
+            });
+
+            // Individual checkbox change - Use event delegation for DataTable
+            $(document).on('change', '.lead-checkbox', function() {
+                const leadId = $(this).val();
+                const isChecked = $(this).is(':checked');
+
+                if (isChecked) {
+                    // Add to selected array if not already present
+                    if (window.selectedLeads.indexOf(leadId) === -1) {
+                        window.selectedLeads.push(leadId);
+                    }
+                } else {
+                    // Remove from selected array
+                    const index = window.selectedLeads.indexOf(leadId);
+                    if (index > -1) {
+                        window.selectedLeads.splice(index, 1);
+                    }
+                    // Uncheck select all if individual checkbox is unchecked
+                    $('#selectAll').prop('checked', false);
+                }
+
+                updateSelectAllState();
+            });
+
+            // Function to update select all checkbox state
+            function updateSelectAllState() {
+                const visibleCheckboxes = $('#dataTableExample tbody .lead-checkbox');
+                const visibleChecked = $('#dataTableExample tbody .lead-checkbox:checked');
+
+                if (visibleCheckboxes.length > 0 && visibleCheckboxes.length === visibleChecked.length) {
+                    $('#selectAll').prop('checked', true);
+                } else {
+                    $('#selectAll').prop('checked', false);
+                }
+            }
 
             // Initialize Feather icons after DataTable renders
             if (typeof feather !== 'undefined') {
@@ -415,9 +515,21 @@
 
         // Bulk delete functionality
         function bulkDelete() {
-            const selectedLeads = $('.lead-checkbox:checked').map(function() {
-                return this.value;
-            }).get();
+            // Get all selected leads from the global array
+            var selectedLeads = [];
+
+            // First, get from the global array (stores selections across all pages)
+            if (typeof window.selectedLeads !== 'undefined' && window.selectedLeads.length > 0) {
+                selectedLeads = window.selectedLeads.slice(); // Copy array
+            }
+
+            // Also get currently visible checked checkboxes (in case global array is not updated)
+            $('.lead-checkbox:checked').each(function() {
+                const leadId = $(this).val();
+                if (selectedLeads.indexOf(leadId) === -1) {
+                    selectedLeads.push(leadId);
+                }
+            });
 
             if (selectedLeads.length === 0) {
                 alert('Please select at least one lead to delete.');

@@ -68,7 +68,8 @@ class LeadController extends Controller
         $sortOrder = $request->get('sort_order', 'desc');
         $query->orderBy($sortBy, $sortOrder);
 
-        $leads = $query->paginate(20);
+        // Get all leads without pagination (DataTable will handle pagination client-side)
+        $leads = $query->get();
         $categories = Category::active()->get();
         $municipalities = Lead::select('municipality')
             ->whereNotNull('municipality')

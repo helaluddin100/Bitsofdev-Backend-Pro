@@ -11,36 +11,47 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('leads', function (Blueprint $table) {
-            // Add missing fields for comprehensive lead management
-            $table->string('full_address')->nullable()->after('address');
-            $table->string('street')->nullable()->after('full_address');
-            $table->string('municipality')->nullable()->after('street');
-            $table->json('phones')->nullable()->after('phone'); // Multiple phone numbers
-            $table->boolean('claimed')->default(false)->after('is_active');
-            $table->integer('review_count')->default(0)->after('claimed');
-            $table->decimal('average_rating', 3, 2)->nullable()->after('review_count');
-            $table->text('review_url')->nullable()->after('average_rating');
-            $table->text('google_maps_url')->nullable()->after('review_url');
-            $table->string('domain')->nullable()->after('website');
-            $table->text('opening_hours')->nullable()->after('open_hours');
+        // Skip if leads table doesn't exist
+        if (!Schema::hasTable('leads')) {
+            return;
+        }
 
-            // Google Business Information
-            $table->string('cid')->nullable()->after('opening_hours');
-            $table->string('place_id')->nullable()->after('cid');
-            $table->string('kgmid')->nullable()->after('place_id');
-            $table->string('plus_code')->nullable()->after('kgmid');
-            $table->text('google_knowledge_url')->nullable()->after('plus_code');
-
-            // Additional tracking fields
-            $table->integer('contact_count')->default(0)->after('last_contacted_at');
-
-            // Add indexes for better performance
-            $table->index(['category', 'is_active']);
-            $table->index(['municipality']);
-            $table->index(['claimed']);
-            $table->index(['email', 'phone']);
-        });
+        // All columns are already in the initial leads table migration
+        // This migration is kept for backward compatibility
+        // Only add indexes if they don't exist
+        
+        // Try to add indexes (will fail silently if they already exist)
+        try {
+            Schema::table('leads', function (Blueprint $table) {
+                $table->index(['category', 'is_active'], 'leads_category_is_active_index');
+            });
+        } catch (\Exception $e) {
+            // Index already exists, ignore
+        }
+        
+        try {
+            Schema::table('leads', function (Blueprint $table) {
+                $table->index('municipality', 'leads_municipality_index');
+            });
+        } catch (\Exception $e) {
+            // Index already exists, ignore
+        }
+        
+        try {
+            Schema::table('leads', function (Blueprint $table) {
+                $table->index('claimed', 'leads_claimed_index');
+            });
+        } catch (\Exception $e) {
+            // Index already exists, ignore
+        }
+        
+        try {
+            Schema::table('leads', function (Blueprint $table) {
+                $table->index(['email', 'phone'], 'leads_email_phone_index');
+            });
+        } catch (\Exception $e) {
+            // Index already exists, ignore
+        }
     }
 
     /**

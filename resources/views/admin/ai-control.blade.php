@@ -1,5 +1,16 @@
 @extends('master.master')
 
+@section('title', 'AI Control Dashboard')
+
+@push('styles')
+<style>
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+    }
+</style>
+@endpush
+
 @section('content')
     <div class="page-content">
         <nav class="page-breadcrumb">
@@ -11,7 +22,7 @@
         </nav>
 
         <!-- Page Header -->
-        <div class="row">
+        <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-body">
@@ -35,7 +46,7 @@
 
         <!-- Success/Error Messages -->
         @if (session('success'))
-            <div class="row">
+            <div class="row mb-3">
                 <div class="col-12">
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
                         <i data-feather="check-circle" class="me-2"></i>
@@ -47,7 +58,7 @@
         @endif
 
         @if (session('error'))
-            <div class="row">
+            <div class="row mb-3">
                 <div class="col-12">
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
                         <i data-feather="alert-circle" class="me-2"></i>
@@ -59,7 +70,7 @@
         @endif
 
         <!-- AI Settings Card -->
-        <div class="row">
+        <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
@@ -138,7 +149,7 @@
         </div>
 
         <!-- Quick Actions -->
-        <div class="row">
+        <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
@@ -190,7 +201,7 @@
         </div>
 
         <!-- Learning Statistics -->
-        <div class="row">
+        <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
@@ -201,7 +212,7 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
                                 <div class="card bg-primary text-white">
                                     <div class="card-body text-center">
                                         <h3 class="mb-0">{{ $learningStats['total_learned'] }}</h3>
@@ -209,7 +220,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
                                 <div class="card bg-success text-white">
                                     <div class="card-body text-center">
                                         <h3 class="mb-0">{{ $learningStats['active_learned'] }}</h3>
@@ -217,7 +228,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
                                 <div class="card bg-warning text-white">
                                     <div class="card-body text-center">
                                         <h3 class="mb-0">{{ $learningStats['pending_review'] }}</h3>
@@ -225,7 +236,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
                                 <div class="card bg-info text-white">
                                     <div class="card-body text-center">
                                         <h3 class="mb-0">{{ $learningStats['learning_progress'] }}%</h3>
@@ -266,7 +277,7 @@
         </div>
 
         <!-- Recent Learned Questions -->
-        <div class="row">
+        <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
@@ -316,11 +327,16 @@
             </div>
         </div>
     </div>
+@endsection
 
-    <script>
-        // Auto-refresh page every 30 seconds to show latest data
-        setTimeout(function() {
-            location.reload();
-        }, 30000);
-    </script>
+@section('js')
+<script>
+    // Initialize Feather icons
+    feather.replace();
+
+    // Auto-refresh page every 30 seconds to show latest data (optional)
+    // setTimeout(function() {
+    //     location.reload();
+    // }, 30000);
+</script>
 @endsection

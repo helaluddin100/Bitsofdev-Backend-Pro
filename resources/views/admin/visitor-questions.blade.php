@@ -2,92 +2,150 @@
 
 @section('title', 'Visitor Questions Management')
 
+@push('styles')
+<style>
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+    }
+</style>
+@endpush
+
 @section('content')
-<div class="container-fluid">
-    <div class="row">
+<div class="page-content">
+    <nav class="page-breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('admin.ai-dashboard') }}">AI Chatbot</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Visitor Questions</li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="row mb-4">
         <div class="col-12">
-            <div class="page-title-box">
-                <h4 class="page-title">Visitor Questions Management</h4>
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-2">
+                                <i data-feather="message-circle" class="me-2"></i>
+                                Visitor Questions Management
+                            </h4>
+                            <p class="text-muted">Monitor and respond to visitor questions from your AI chatbot.</p>
+                        </div>
+                        <div>
+                            <a href="{{ route('admin.ai-dashboard') }}" class="btn btn-outline-primary me-2">
+                                <i data-feather="cpu" style="width: 16px; height: 16px;"></i> AI Dashboard
+                            </a>
+                            <a href="{{ route('admin.qa-management') }}" class="btn btn-primary">
+                                <i data-feather="plus" style="width: 16px; height: 16px;"></i> Manage Q&A
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Alert Messages -->
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i data-feather="check-circle" class="me-2"></i>
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
         </div>
     @endif
 
     <!-- Statistics Cards -->
-    <div class="row">
-        <div class="col-xl-3 col-md-6">
-            <div class="card widget-flat">
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
+            <div class="card bg-primary text-white">
                 <div class="card-body">
-                    <div class="float-end">
-                        <i class="mdi mdi-help-circle widget-icon bg-primary-lighten text-primary"></i>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ $stats['total_questions'] }}</h3>
+                            <p class="mb-0">Total Questions</p>
+                            <small class="text-white-50">All Time</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="help-circle" class="text-white-50" style="width: 40px; height: 40px;"></i>
+                        </div>
                     </div>
-                    <h5 class="text-muted fw-normal mt-0" title="Total Questions">Total Questions</h5>
-                    <h3 class="mt-3 mb-3">{{ $stats['total_questions'] }}</h3>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6">
-            <div class="card widget-flat">
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
+            <div class="card bg-warning text-white">
                 <div class="card-body">
-                    <div class="float-end">
-                        <i class="mdi mdi-clock widget-icon bg-warning-lighten text-warning"></i>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ $stats['pending_questions'] }}</h3>
+                            <p class="mb-0">Pending Questions</p>
+                            <small class="text-white-50">Needs Review</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="clock" class="text-white-50" style="width: 40px; height: 40px;"></i>
+                        </div>
                     </div>
-                    <h5 class="text-muted fw-normal mt-0" title="Pending Questions">Pending Questions</h5>
-                    <h3 class="mt-3 mb-3">{{ $stats['pending_questions'] }}</h3>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6">
-            <div class="card widget-flat">
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
+            <div class="card bg-success text-white">
                 <div class="card-body">
-                    <div class="float-end">
-                        <i class="mdi mdi-check-circle widget-icon bg-success-lighten text-success"></i>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ $stats['answered_questions'] }}</h3>
+                            <p class="mb-0">Answered Questions</p>
+                            <small class="text-white-50">Resolved</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="check-circle" class="text-white-50" style="width: 40px; height: 40px;"></i>
+                        </div>
                     </div>
-                    <h5 class="text-muted fw-normal mt-0" title="Answered Questions">Answered Questions</h5>
-                    <h3 class="mt-3 mb-3">{{ $stats['answered_questions'] }}</h3>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6">
-            <div class="card widget-flat">
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
+            <div class="card bg-info text-white">
                 <div class="card-body">
-                    <div class="float-end">
-                        <i class="mdi mdi-trophy widget-icon bg-info-lighten text-info"></i>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ $stats['converted_questions'] }}</h3>
+                            <p class="mb-0">Converted Questions</p>
+                            <small class="text-white-50">To Q&A Pairs</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="award" class="text-white-50" style="width: 40px; height: 40px;"></i>
+                        </div>
                     </div>
-                    <h5 class="text-muted fw-normal mt-0" title="Converted Questions">Converted Questions</h5>
-                    <h3 class="mt-3 mb-3">{{ $stats['converted_questions'] }}</h3>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Visitor Questions List -->
-    <div class="row">
+    <div class="row mb-4">
         <div class="col-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="card-title">Visitor Questions</h4>
-                    <div class="btn-group">
-                        <a href="{{ route('admin.ai-dashboard') }}" class="btn btn-info">
-                            <i class="mdi mdi-robot"></i> AI Dashboard
-                        </a>
-                        <a href="{{ route('admin.qa-management') }}" class="btn btn-primary">
-                            <i class="mdi mdi-plus"></i> Manage Q&A Pairs
-                        </a>
-                    </div>
-                </div>
                 <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h6 class="card-title mb-0">
+                            <i data-feather="users" class="me-2"></i>
+                            Visitor Questions
+                        </h6>
+                    </div>
+
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
                                     <th>Question</th>
@@ -138,33 +196,37 @@
                                             Session: {{ Str::limit($question->visitor_session, 10) }}
                                         </small>
                                     </td>
-                                    <td>{{ $question->created_at->format('M d, Y H:i') }}</td>
                                     <td>
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-outline-info"
-                                                    onclick="viewQuestion({{ $question->id }})" title="View Details">
-                                                <i class="mdi mdi-eye"></i>
+                                        <small class="text-muted">{{ $question->created_at->format('M d, Y H:i') }}</small>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-info me-1"
+                                                onclick="viewQuestion({{ $question->id }})" title="View Details">
+                                            <i data-feather="eye" style="width: 14px; height: 14px;"></i>
+                                        </button>
+                                        @if($question->status === 'pending' || $question->status === 'no_match')
+                                            <button type="button" class="btn btn-sm btn-success me-1"
+                                                    onclick="answerQuestion({{ $question->id }})" title="Answer Question">
+                                                <i data-feather="message-square" style="width: 14px; height: 14px;"></i>
                                             </button>
-                                            @if($question->status === 'pending' || $question->status === 'no_match')
-                                                <button type="button" class="btn btn-sm btn-outline-success"
-                                                        onclick="answerQuestion({{ $question->id }})" title="Answer Question">
-                                                    <i class="mdi mdi-reply"></i>
+                                        @endif
+                                        @if($question->status === 'answered' && !$question->is_converted)
+                                            <form action="{{ route('admin.mark-converted', $question->id) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-warning" title="Mark as Converted">
+                                                    <i data-feather="award" style="width: 14px; height: 14px;"></i>
                                                 </button>
-                                            @endif
-                                            @if($question->status === 'answered' && !$question->is_converted)
-                                                <form action="{{ route('admin.mark-converted', $question->id) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-sm btn-outline-info" title="Mark as Converted">
-                                                        <i class="mdi mdi-trophy"></i>
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        </div>
+                                            </form>
+                                        @endif
                                     </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="6" class="text-center">No visitor questions found</td>
+                                    <td colspan="6" class="text-center py-5">
+                                        <i data-feather="inbox" class="text-muted mb-3" style="width: 48px; height: 48px;"></i>
+                                        <h6 class="text-muted">No visitor questions found</h6>
+                                        <p class="text-muted">Questions from visitors will appear here.</p>
+                                    </td>
                                 </tr>
                                 @endforelse
                             </tbody>
@@ -172,9 +234,11 @@
                     </div>
 
                     <!-- Pagination -->
-                    <div class="d-flex justify-content-center">
-                        {{ $visitorQuestions->links() }}
-                    </div>
+                    @if($visitorQuestions->hasPages())
+                        <div class="d-flex justify-content-center mt-4">
+                            {{ $visitorQuestions->links() }}
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -246,16 +310,29 @@
     </div>
 </div>
 
+@endsection
+
+@section('js')
 <script>
+// Initialize Feather icons
+feather.replace();
+
 function viewQuestion(id) {
     // This would typically fetch data via AJAX
     document.getElementById('questionDetails').innerHTML = `
-        <p>Question ID: ${id}</p>
-        <p>This would show detailed information about the visitor question.</p>
-        <p>You can implement AJAX loading here to fetch and display the full details.</p>
+        <div class="text-center py-4">
+            <i data-feather="message-circle" class="text-primary mb-3" style="width: 48px; height: 48px;"></i>
+            <h6>Question ID: ${id}</h6>
+            <p class="text-muted">This would show detailed information about the visitor question.</p>
+            <p class="text-muted">You can implement AJAX loading here to fetch and display the full details.</p>
+        </div>
     `;
 
-    new bootstrap.Modal(document.getElementById('viewQuestionModal')).show();
+    const modal = new bootstrap.Modal(document.getElementById('viewQuestionModal'));
+    modal.show();
+    
+    // Re-initialize feather icons in modal
+    setTimeout(() => feather.replace(), 100);
 }
 
 function answerQuestion(id) {
@@ -265,7 +342,8 @@ function answerQuestion(id) {
     // This would typically fetch question data via AJAX
     document.getElementById('questionText').textContent = `Question ID: ${id} - This would show the actual question text.`;
 
-    new bootstrap.Modal(document.getElementById('answerQuestionModal')).show();
+    const modal = new bootstrap.Modal(document.getElementById('answerQuestionModal'));
+    modal.show();
 }
 
 // Show/hide Q&A pair fields

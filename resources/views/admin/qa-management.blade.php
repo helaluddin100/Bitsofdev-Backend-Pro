@@ -2,48 +2,91 @@
 
 @section('title', 'Q&A Management')
 
+@push('styles')
+<style>
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+    }
+</style>
+@endpush
+
 @section('content')
-<div class="container-fluid">
-    <div class="row">
+<div class="page-content">
+    <nav class="page-breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('admin.ai-dashboard') }}">AI Chatbot</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Q&A Management</li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="row mb-4">
         <div class="col-12">
-            <div class="page-title-box">
-                <h4 class="page-title">Q&A Management</h4>
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-2">
+                                <i data-feather="list" class="me-2"></i>
+                                Q&A Management
+                            </h4>
+                            <p class="text-muted">Manage your AI chatbot's question and answer pairs.</p>
+                        </div>
+                        <div>
+                            <a href="{{ route('admin.ai-dashboard') }}" class="btn btn-outline-primary">
+                                <i data-feather="cpu" style="width: 16px; height: 16px;"></i> AI Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Alert Messages -->
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i data-feather="check-circle" class="me-2"></i>
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
         </div>
     @endif
 
     @if($errors->any())
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <ul class="mb-0">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i data-feather="alert-circle" class="me-2"></i>
+                    <ul class="mb-0">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
         </div>
     @endif
 
     <!-- Add/Edit Q&A Form -->
-    <div class="row">
+    <div class="row mb-4">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <h4 class="card-title">
+                <div class="card-body">
+                    <h6 class="card-title mb-4">
+                        <i data-feather="@if(request('edit'))edit-2@else plus-circle @endif" class="me-2"></i>
                         @if(request('edit'))
                             Edit Q&A Pair
                         @else
                             Add New Q&A Pair
                         @endif
-                    </h4>
-                </div>
-                <div class="card-body">
+                    </h6>
                     @php
                         $editingQA = request('edit') ? $qaPairs->find(request('edit')) : null;
                     @endphp
@@ -136,12 +179,12 @@
                         <div class="row">
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="mdi mdi-content-save"></i>
+                                    <i data-feather="save" style="width: 16px; height: 16px;"></i>
                                     {{ request('edit') ? 'Update' : 'Create' }} Q&A Pair
                                 </button>
                                 @if(request('edit'))
                                     <a href="{{ route('admin.qa-management') }}" class="btn btn-secondary">
-                                        <i class="mdi mdi-close"></i> Cancel
+                                        <i data-feather="x" style="width: 16px; height: 16px;"></i> Cancel
                                     </a>
                                 @endif
                             </div>
@@ -153,18 +196,22 @@
     </div>
 
     <!-- Q&A Pairs List -->
-    <div class="row">
+    <div class="row mb-4">
         <div class="col-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="card-title">All Q&A Pairs</h4>
-                    <a href="{{ route('admin.ai-dashboard') }}" class="btn btn-info">
-                        <i class="mdi mdi-robot"></i> AI Dashboard
-                    </a>
-                </div>
                 <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h6 class="card-title mb-0">
+                            <i data-feather="database" class="me-2"></i>
+                            All Q&A Pairs
+                        </h6>
+                        <a href="{{ route('admin.ai-dashboard') }}" class="btn btn-info btn-sm">
+                            <i data-feather="cpu" style="width: 16px; height: 16px;"></i> AI Dashboard
+                        </a>
+                    </div>
+
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
                                     <th>Question</th>
@@ -198,38 +245,42 @@
                                             <span class="badge bg-danger">Inactive</span>
                                         @endif
                                     </td>
-                                    <td>{{ $qa->created_at->format('M d, Y') }}</td>
                                     <td>
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-outline-info"
-                                                    onclick="viewQA({{ $qa->id }})" title="View Details">
-                                                <i class="mdi mdi-eye"></i>
+                                        <small class="text-muted">{{ $qa->created_at->format('M d, Y') }}</small>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-info me-1"
+                                                onclick="viewQA({{ $qa->id }})" title="View Details">
+                                            <i data-feather="eye" style="width: 14px; height: 14px;"></i>
+                                        </button>
+                                        <a href="{{ route('admin.qa-management', ['edit' => $qa->id]) }}"
+                                           class="btn btn-sm btn-warning me-1" title="Edit">
+                                            <i data-feather="edit-2" style="width: 14px; height: 14px;"></i>
+                                        </a>
+                                        <form action="{{ route('admin.qa-toggle', $qa->id) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-{{ $qa->is_active ? 'danger' : 'success' }} me-1"
+                                                    title="{{ $qa->is_active ? 'Deactivate' : 'Activate' }}">
+                                                <i data-feather="{{ $qa->is_active ? 'pause' : 'play' }}" style="width: 14px; height: 14px;"></i>
                                             </button>
-                                            <a href="{{ route('admin.qa-management', ['edit' => $qa->id]) }}"
-                                               class="btn btn-sm btn-outline-warning" title="Edit">
-                                                <i class="mdi mdi-pencil"></i>
-                                            </a>
-                                            <form action="{{ route('admin.qa-toggle', $qa->id) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-outline-{{ $qa->is_active ? 'danger' : 'success' }}"
-                                                        title="{{ $qa->is_active ? 'Deactivate' : 'Activate' }}">
-                                                    <i class="mdi mdi-{{ $qa->is_active ? 'pause' : 'play' }}"></i>
-                                                </button>
-                                            </form>
-                                            <form action="{{ route('admin.qa-delete', $qa->id) }}" method="POST" class="d-inline"
-                                                  onsubmit="return confirm('Are you sure you want to delete this Q&A pair?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
-                                                    <i class="mdi mdi-delete"></i>
-                                                </button>
-                                            </form>
-                                        </div>
+                                        </form>
+                                        <form action="{{ route('admin.qa-delete', $qa->id) }}" method="POST" class="d-inline"
+                                              onsubmit="return confirm('Are you sure you want to delete this Q&A pair?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete">
+                                                <i data-feather="trash-2" style="width: 14px; height: 14px;"></i>
+                                            </button>
+                                        </form>
                                     </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="7" class="text-center">No Q&A pairs found</td>
+                                    <td colspan="7" class="text-center py-5">
+                                        <i data-feather="inbox" class="text-muted mb-3" style="width: 48px; height: 48px;"></i>
+                                        <h6 class="text-muted">No Q&A pairs found</h6>
+                                        <p class="text-muted">Start by adding your first Q&A pair above.</p>
+                                    </td>
                                 </tr>
                                 @endforelse
                             </tbody>
@@ -256,17 +307,30 @@
     </div>
 </div>
 
+@endsection
+
+@section('js')
 <script>
+// Initialize Feather icons
+feather.replace();
+
 function viewQA(id) {
     // This would typically fetch data via AJAX
     // For now, we'll show a simple message
     document.getElementById('qaDetails').innerHTML = `
-        <p>Q&A ID: ${id}</p>
-        <p>This would show detailed information about the Q&A pair.</p>
-        <p>You can implement AJAX loading here to fetch and display the full details.</p>
+        <div class="text-center py-4">
+            <i data-feather="message-circle" class="text-primary mb-3" style="width: 48px; height: 48px;"></i>
+            <h6>Q&A ID: ${id}</h6>
+            <p class="text-muted">This would show detailed information about the Q&A pair.</p>
+            <p class="text-muted">You can implement AJAX loading here to fetch and display the full details.</p>
+        </div>
     `;
 
-    new bootstrap.Modal(document.getElementById('viewQAModal')).show();
+    const modal = new bootstrap.Modal(document.getElementById('viewQAModal'));
+    modal.show();
+    
+    // Re-initialize feather icons in modal
+    setTimeout(() => feather.replace(), 100);
 }
 </script>
 @endsection

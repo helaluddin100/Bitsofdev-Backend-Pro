@@ -1,5 +1,108 @@
 @extends('master.master')
 
+@push('styles')
+    <style>
+        /* Avatar Styles */
+        .avatar-sm {
+            width: 40px;
+            height: 40px;
+        }
+
+        /* Statistics Cards Hover Effect */
+        .stats-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Activity Item Hover */
+        .activity-item {
+            transition: all 0.2s ease;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .activity-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(5px);
+        }
+
+        /* Quick Stats Hover */
+        .quick-stat-item {
+            transition: all 0.2s ease;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .quick-stat-item:hover {
+            background-color: #f8f9fa;
+            transform: scale(1.05);
+        }
+
+        /* Contact Table Row Hover */
+        .table-hover tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Card Enhancements */
+        .card {
+            border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Badge Animations */
+        .badge {
+            transition: all 0.2s ease;
+        }
+
+        .badge:hover {
+            transform: scale(1.1);
+        }
+
+        /* Icon Pulse Animation */
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .icon-pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* Empty State */
+        .empty-state {
+            padding: 40px 20px;
+        }
+
+        .empty-state i {
+            opacity: 0.5;
+        }
+    </style>
+@endpush
+
 @section('content')
     <div class="page-content">
         <nav class="page-breadcrumb">
@@ -14,14 +117,36 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h4 class="card-title mb-2">Welcome back, {{ Auth::user()->name }}!</h4>
-                                <p class="text-muted">Here's what's happening with your website today.</p>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap">
+                            <div class="mb-3 mb-md-0">
+                                <h4 class="card-title mb-2">
+                                    <i data-feather="smile" class="text-primary me-2"
+                                        style="width: 24px; height: 24px;"></i>
+                                    Welcome back, {{ Auth::user()->name }}!
+                                </h4>
+                                <p class="text-muted mb-3">Here's what's happening with your website today.</p>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ route('admin.blogs.create') }}" class="btn btn-sm btn-outline-primary">
+                                        <i data-feather="plus" style="width: 14px; height: 14px;"></i> New Blog
+                                    </a>
+                                    <a href="{{ route('admin.projects.create') }}" class="btn btn-sm btn-outline-success">
+                                        <i data-feather="briefcase" style="width: 14px; height: 14px;"></i> New Project
+                                    </a>
+                                    <a href="{{ route('admin.contacts.index') }}" class="btn btn-sm btn-outline-info">
+                                        <i data-feather="mail" style="width: 14px; height: 14px;"></i> Messages
+                                    </a>
+                                </div>
                             </div>
                             <div class="text-end">
-                                <h6 class="text-muted">{{ now()->format('l, F j, Y') }}</h6>
-                                <p class="text-muted">{{ now()->format('g:i A') }}</p>
+                                <div class="mb-2">
+                                    <i data-feather="calendar" class="text-muted me-1"
+                                        style="width: 16px; height: 16px;"></i>
+                                    <h6 class="text-muted d-inline">{{ now()->format('l, F j, Y') }}</h6>
+                                </div>
+                                <div>
+                                    <i data-feather="clock" class="text-muted me-1" style="width: 16px; height: 16px;"></i>
+                                    <p class="text-muted d-inline">{{ now()->format('g:i A') }}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -33,74 +158,84 @@
         <div class="row mb-4">
             <!-- Projects Card -->
             <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-                <div class="card bg-primary text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h3 class="mb-0">{{ $totalProjects }}</h3>
-                                <p class="mb-0">Total Projects</p>
-                                <small class="text-white-50">{{ $activeProjects }} Active</small>
-                            </div>
-                            <div class="align-self-center">
-                                <i data-feather="briefcase" class="text-white-50" style="width: 40px; height: 40px;"></i>
+                <a href="{{ route('admin.projects.index') }}" class="text-decoration-none">
+                    <div class="card bg-primary text-white stats-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h3 class="mb-0">{{ $totalProjects }}</h3>
+                                    <p class="mb-0">Total Projects</p>
+                                    <small class="text-white-50">{{ $activeProjects }} Active</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i data-feather="briefcase" class="text-white-50"
+                                        style="width: 40px; height: 40px;"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- Blogs Card -->
             <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-                <div class="card bg-success text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h3 class="mb-0">{{ $totalBlogs }}</h3>
-                                <p class="mb-0">Total Blogs</p>
-                                <small class="text-white-50">{{ $publishedBlogs }} Published</small>
-                            </div>
-                            <div class="align-self-center">
-                                <i data-feather="file-text" class="text-white-50" style="width: 40px; height: 40px;"></i>
+                <a href="{{ route('admin.blogs.index') }}" class="text-decoration-none">
+                    <div class="card bg-success text-white stats-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h3 class="mb-0">{{ $totalBlogs }}</h3>
+                                    <p class="mb-0">Total Blogs</p>
+                                    <small class="text-white-50">{{ $publishedBlogs }} Published</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i data-feather="file-text" class="text-white-50"
+                                        style="width: 40px; height: 40px;"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- Contacts Card -->
             <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-                <div class="card bg-info text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h3 class="mb-0">{{ $totalContacts }}</h3>
-                                <p class="mb-0">Total Contacts</p>
-                                <small class="text-white-50">{{ $newContacts }} New</small>
-                            </div>
-                            <div class="align-self-center">
-                                <i data-feather="mail" class="text-white-50" style="width: 40px; height: 40px;"></i>
+                <a href="{{ route('admin.contacts.index') }}" class="text-decoration-none">
+                    <div class="card bg-info text-white stats-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h3 class="mb-0">{{ $totalContacts }}</h3>
+                                    <p class="mb-0">Total Contacts</p>
+                                    <small class="text-white-50">{{ $newContacts }} New</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i data-feather="mail" class="text-white-50" style="width: 40px; height: 40px;"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- Visitors Card -->
             <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-                <div class="card bg-warning text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h3 class="mb-0">{{ $totalVisitors }}</h3>
-                                <p class="mb-0">Total Visitors</p>
-                                <small class="text-white-50">{{ $uniqueVisitors }} Unique</small>
-                            </div>
-                            <div class="align-self-center">
-                                <i data-feather="users" class="text-white-50" style="width: 40px; height: 40px;"></i>
+                <a href="{{ route('admin.visitors.index') }}" class="text-decoration-none">
+                    <div class="card bg-warning text-white stats-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h3 class="mb-0">{{ $totalVisitors }}</h3>
+                                    <p class="mb-0">Total Visitors</p>
+                                    <small class="text-white-50">{{ $uniqueVisitors }} Unique</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i data-feather="users" class="text-white-50" style="width: 40px; height: 40px;"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
         </div>
 
@@ -109,7 +244,13 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-body">
-                        <h6 class="card-title">Today's Activity</h6>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="card-title mb-0">
+                                <i data-feather="activity" class="text-primary me-2"></i>
+                                Today's Activity
+                            </h6>
+                            <span class="badge bg-primary">Live</span>
+                        </div>
                         <div class="row">
                             <div class="col-md-3">
                                 <div class="d-flex align-items-center">
@@ -137,7 +278,8 @@
                             <div class="col-md-3">
                                 <div class="d-flex align-items-center">
                                     <div class="me-3">
-                                        <i data-feather="eye" class="text-warning" style="width: 24px; height: 24px;"></i>
+                                        <i data-feather="eye" class="text-warning"
+                                            style="width: 24px; height: 24px;"></i>
                                     </div>
                                     <div>
                                         <h6 class="mb-0">{{ $visitorsToday }}</h6>
@@ -247,10 +389,13 @@
                                 </table>
                             </div>
                         @else
-                            <div class="text-center py-4">
-                                <i data-feather="mail" class="text-muted" style="width: 48px; height: 48px;"></i>
-                                <h6 class="mt-3 text-muted">No contacts today</h6>
-                                <p class="text-muted">Check back later for new messages.</p>
+                            <div class="text-center empty-state">
+                                <i data-feather="mail" class="text-muted mb-3" style="width: 64px; height: 64px;"></i>
+                                <h5 class="text-muted mb-2">No contacts today</h5>
+                                <p class="text-muted mb-3">Check back later for new messages.</p>
+                                <a href="{{ route('admin.contacts.index') }}" class="btn btn-sm btn-outline-primary">
+                                    <i data-feather="eye" style="width: 14px; height: 14px;"></i> View All Contacts
+                                </a>
                             </div>
                         @endif
                     </div>
@@ -262,28 +407,31 @@
                 <!-- Quick Stats -->
                 <div class="card mb-4">
                     <div class="card-body">
-                        <h6 class="card-title">Quick Stats</h6>
+                        <h6 class="card-title mb-3">
+                            <i data-feather="bar-chart-2" class="text-primary me-2"></i>
+                            Quick Stats
+                        </h6>
                         <div class="row">
                             <div class="col-6 mb-3">
-                                <div class="text-center">
+                                <div class="text-center quick-stat-item">
                                     <h4 class="text-primary mb-1">{{ $projectsThisMonth }}</h4>
                                     <small class="text-muted">Projects This Month</small>
                                 </div>
                             </div>
                             <div class="col-6 mb-3">
-                                <div class="text-center">
+                                <div class="text-center quick-stat-item">
                                     <h4 class="text-success mb-1">{{ $blogsThisMonth }}</h4>
                                     <small class="text-muted">Blogs This Month</small>
                                 </div>
                             </div>
                             <div class="col-6 mb-3">
-                                <div class="text-center">
+                                <div class="text-center quick-stat-item">
                                     <h4 class="text-info mb-1">{{ $contactsThisMonth }}</h4>
                                     <small class="text-muted">Contacts This Month</small>
                                 </div>
                             </div>
                             <div class="col-6 mb-3">
-                                <div class="text-center">
+                                <div class="text-center quick-stat-item">
                                     <h4 class="text-warning mb-1">{{ $visitorsThisMonth }}</h4>
                                     <small class="text-muted">Visitors This Month</small>
                                 </div>
@@ -295,10 +443,16 @@
                 <!-- Recent Activity -->
                 <div class="card">
                     <div class="card-body">
-                        <h6 class="card-title">Recent Activity</h6>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="card-title mb-0">
+                                <i data-feather="clock" class="text-info me-2"></i>
+                                Recent Activity
+                            </h6>
+                            <a href="{{ route('admin.contacts.index') }}" class="text-muted small">View All</a>
+                        </div>
                         <div class="activity-feed">
                             @foreach ($recentContacts->take(3) as $contact)
-                                <div class="d-flex align-items-start mb-3">
+                                <div class="d-flex align-items-start activity-item">
                                     <div class="me-3">
                                         <div
                                             class="avatar-sm bg-info rounded-circle d-flex align-items-center justify-content-center">
@@ -315,7 +469,7 @@
                             @endforeach
 
                             @if ($recentProjects->count() > 0)
-                                <div class="d-flex align-items-start mb-3">
+                                <div class="d-flex align-items-start activity-item">
                                     <div class="me-3">
                                         <div
                                             class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center">
@@ -343,22 +497,35 @@
             <div class="col-lg-6">
                 <div class="card">
                     <div class="card-body">
-                        <h6 class="card-title">Top Visited Pages (Last 30 Days)</h6>
+                        <h6 class="card-title mb-4">
+                            <i data-feather="trending-up" class="text-primary me-2"></i>
+                            Top Visited Pages (Last 30 Days)
+                        </h6>
                         @if ($topPages->count() > 0)
                             <div class="list-group list-group-flush">
                                 @foreach ($topPages as $page)
-                                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                        <div>
-                                            <h6 class="mb-1">{{ $page->page_url }}</h6>
+                                    <div
+                                        class="list-group-item d-flex justify-content-between align-items-center px-0 border-0">
+                                        <div class="d-flex align-items-center">
+                                            <i data-feather="file-text" class="text-muted me-2"
+                                                style="width: 18px; height: 18px;"></i>
+                                            <h6 class="mb-0">{{ $page->page_url }}</h6>
                                         </div>
-                                        <span class="badge bg-primary rounded-pill">{{ $page->visits }}</span>
+                                        <div>
+                                            <span class="badge bg-primary rounded-pill">
+                                                <i data-feather="eye" style="width: 12px; height: 12px;"></i>
+                                                {{ $page->visits }}
+                                            </span>
+                                        </div>
                                     </div>
                                 @endforeach
                             </div>
                         @else
-                            <div class="text-center py-4">
-                                <i data-feather="bar-chart" class="text-muted" style="width: 48px; height: 48px;"></i>
-                                <h6 class="mt-3 text-muted">No visitor data</h6>
+                            <div class="text-center empty-state">
+                                <i data-feather="bar-chart" class="text-muted mb-3"
+                                    style="width: 64px; height: 64px;"></i>
+                                <h6 class="text-muted mb-2">No visitor data</h6>
+                                <p class="text-muted small">Page visit data will appear here</p>
                             </div>
                         @endif
                     </div>
@@ -368,22 +535,34 @@
             <div class="col-lg-6">
                 <div class="card">
                     <div class="card-body">
-                        <h6 class="card-title">Visitors by Country (Last 30 Days)</h6>
+                        <h6 class="card-title mb-4">
+                            <i data-feather="globe" class="text-success me-2"></i>
+                            Visitors by Country (Last 30 Days)
+                        </h6>
                         @if ($visitorsByCountry->count() > 0)
                             <div class="list-group list-group-flush">
                                 @foreach ($visitorsByCountry->take(5) as $country)
-                                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                        <div>
-                                            <h6 class="mb-1">{{ $country->country }}</h6>
+                                    <div
+                                        class="list-group-item d-flex justify-content-between align-items-center px-0 border-0">
+                                        <div class="d-flex align-items-center">
+                                            <i data-feather="map-pin" class="text-muted me-2"
+                                                style="width: 18px; height: 18px;"></i>
+                                            <h6 class="mb-0">{{ $country->country }}</h6>
                                         </div>
-                                        <span class="badge bg-success rounded-pill">{{ $country->count }}</span>
+                                        <div>
+                                            <span class="badge bg-success rounded-pill">
+                                                <i data-feather="users" style="width: 12px; height: 12px;"></i>
+                                                {{ $country->count }}
+                                            </span>
+                                        </div>
                                     </div>
                                 @endforeach
                             </div>
                         @else
-                            <div class="text-center py-4">
-                                <i data-feather="globe" class="text-muted" style="width: 48px; height: 48px;"></i>
-                                <h6 class="mt-3 text-muted">No location data</h6>
+                            <div class="text-center empty-state">
+                                <i data-feather="globe" class="text-muted mb-3" style="width: 64px; height: 64px;"></i>
+                                <h6 class="text-muted mb-2">No location data</h6>
+                                <p class="text-muted small">Visitor country data will appear here</p>
                             </div>
                         @endif
                     </div>

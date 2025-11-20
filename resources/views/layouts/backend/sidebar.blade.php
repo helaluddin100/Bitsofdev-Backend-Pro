@@ -1,3 +1,14 @@
+<style>
+    /* Force only .show dropdowns to be visible */
+    .sidebar-body .collapse:not(.show) {
+        display: none !important;
+    }
+
+    .sidebar-body .collapse.show {
+        display: block !important;
+    }
+</style>
+
 <nav class="sidebar">
     <div class="sidebar-header">
         <a href="#" class="sidebar-brand">
@@ -10,10 +21,11 @@
         </div>
     </div>
     <div class="sidebar-body">
-        <ul class="nav">
+        <ul class="nav" id="sidebar-accordion">
             <li class="nav-item nav-category">Main</li>
             <li class="nav-item">
-                <a href="{{ route('admin.dashboard') }}" class="nav-link">
+                <a href="{{ route('admin.dashboard') }}"
+                    class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                     <i class="link-icon" data-feather="box"></i>
                     <span class="link-title">Dashboard</span>
                 </a>
@@ -24,12 +36,14 @@
             <!-- Blog Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#blog-management" role="button"
-                    aria-expanded="false" aria-controls="blog-management">
+                    aria-expanded="{{ request()->routeIs('admin.blogs.*') || request()->routeIs('admin.categories.*') ? 'true' : 'false' }}"
+                    aria-controls="blog-management">
                     <i class="link-icon" data-feather="file-text"></i>
                     <span class="link-title">Blog Management</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
                 </a>
-                <div class="collapse" id="blog-management">
+                <div class="collapse {{ request()->routeIs('admin.blogs.*') || request()->routeIs('admin.categories.*') ? 'show' : '' }}"
+                    id="blog-management" data-bs-parent="#sidebar-accordion">
                     <ul class="nav sub-menu">
                         <li class="nav-item">
                             <a href="{{ route('admin.blogs.index') }}" class="nav-link">All Posts</a>
@@ -47,12 +61,14 @@
             <!-- Project Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#project-management" role="button"
-                    aria-expanded="false" aria-controls="project-management">
+                    aria-expanded="{{ request()->routeIs('admin.projects.*') ? 'true' : 'false' }}"
+                    aria-controls="project-management">
                     <i class="link-icon" data-feather="briefcase"></i>
                     <span class="link-title">Project Management</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
                 </a>
-                <div class="collapse" id="project-management">
+                <div class="collapse {{ request()->routeIs('admin.projects.*') ? 'show' : '' }}" id="project-management"
+                    data-bs-parent="#sidebar-accordion">
                     <ul class="nav sub-menu">
                         <li class="nav-item">
                             <a href="{{ route('admin.projects.index') }}" class="nav-link">All Projects</a>
@@ -67,12 +83,14 @@
             <!-- Team Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#team-management" role="button"
-                    aria-expanded="false" aria-controls="team-management">
+                    aria-expanded="{{ request()->routeIs('admin.teams.*') ? 'true' : 'false' }}"
+                    aria-controls="team-management">
                     <i class="link-icon" data-feather="users"></i>
                     <span class="link-title">Team Management</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
                 </a>
-                <div class="collapse" id="team-management">
+                <div class="collapse {{ request()->routeIs('admin.teams.*') ? 'show' : '' }}" id="team-management"
+                    data-bs-parent="#sidebar-accordion">
                     <ul class="nav sub-menu">
                         <li class="nav-item">
                             <a href="{{ route('admin.teams.index') }}" class="nav-link">All Members</a>
@@ -87,12 +105,14 @@
             <!-- Pricing Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#pricing-management" role="button"
-                    aria-expanded="false" aria-controls="pricing-management">
+                    aria-expanded="{{ request()->routeIs('admin.pricing.*') ? 'true' : 'false' }}"
+                    aria-controls="pricing-management">
                     <i class="link-icon" data-feather="dollar-sign"></i>
                     <span class="link-title">Pricing Management</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
                 </a>
-                <div class="collapse" id="pricing-management">
+                <div class="collapse {{ request()->routeIs('admin.pricing.*') ? 'show' : '' }}" id="pricing-management"
+                    data-bs-parent="#sidebar-accordion">
                     <ul class="nav sub-menu">
                         <li class="nav-item">
                             <a href="{{ route('admin.pricing.index') }}" class="nav-link">All Plans</a>
@@ -107,12 +127,14 @@
             <!-- About Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#about-management" role="button"
-                    aria-expanded="false" aria-controls="about-management">
+                    aria-expanded="{{ request()->routeIs('admin.about.*') ? 'true' : 'false' }}"
+                    aria-controls="about-management">
                     <i class="link-icon" data-feather="info"></i>
                     <span class="link-title">About Management</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
                 </a>
-                <div class="collapse" id="about-management">
+                <div class="collapse {{ request()->routeIs('admin.about.*') ? 'show' : '' }}" id="about-management"
+                    data-bs-parent="#sidebar-accordion">
                     <ul class="nav sub-menu">
                         <li class="nav-item">
                             <a href="{{ route('admin.about.index') }}" class="nav-link">Company Information</a>
@@ -126,7 +148,8 @@
 
             <!-- Analytics -->
             <li class="nav-item">
-                <a href="{{ route('admin.analytics.index') }}" class="nav-link">
+                <a href="{{ route('admin.analytics.index') }}"
+                    class="nav-link {{ request()->routeIs('admin.analytics.*') ? 'active' : '' }}">
                     <i class="link-icon" data-feather="bar-chart-2"></i>
                     <span class="link-title">Analytics</span>
                 </a>
@@ -134,7 +157,8 @@
 
             <!-- Visitor Data -->
             <li class="nav-item">
-                <a href="{{ route('admin.visitors.index') }}" class="nav-link">
+                <a href="{{ route('admin.visitors.index') }}"
+                    class="nav-link {{ request()->routeIs('admin.visitors.*') ? 'active' : '' }}">
                     <i class="link-icon" data-feather="users"></i>
                     <span class="link-title">Visitor Data</span>
                 </a>
@@ -142,7 +166,8 @@
 
             <!-- Contact Management -->
             <li class="nav-item">
-                <a href="{{ route('admin.contacts.index') }}" class="nav-link">
+                <a href="{{ route('admin.contacts.index') }}"
+                    class="nav-link {{ request()->routeIs('admin.contacts.*') ? 'active' : '' }}">
                     <i class="link-icon" data-feather="mail"></i>
                     <span class="link-title">Contact Management</span>
                 </a>
@@ -151,12 +176,14 @@
             <!-- Testimonials Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#testimonials-management" role="button"
-                    aria-expanded="false" aria-controls="testimonials-management">
+                    aria-expanded="{{ request()->routeIs('admin.testimonials.*') ? 'true' : 'false' }}"
+                    aria-controls="testimonials-management">
                     <i class="link-icon" data-feather="message-square"></i>
                     <span class="link-title">Testimonials</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
                 </a>
-                <div class="collapse" id="testimonials-management">
+                <div class="collapse {{ request()->routeIs('admin.testimonials.*') ? 'show' : '' }}"
+                    id="testimonials-management" data-bs-parent="#sidebar-accordion">
                     <ul class="nav sub-menu">
                         <li class="nav-item">
                             <a href="{{ route('admin.testimonials.index') }}" class="nav-link">All Testimonials</a>
@@ -165,10 +192,12 @@
                             <a href="{{ route('admin.testimonials.create') }}" class="nav-link">Add Testimonial</a>
                         </li>
                         <li class="nav-item">
-                            <a href="{{ route('admin.testimonials.index', ['status' => 'featured']) }}" class="nav-link">Featured</a>
+                            <a href="{{ route('admin.testimonials.index', ['status' => 'featured']) }}"
+                                class="nav-link">Featured</a>
                         </li>
                         <li class="nav-item">
-                            <a href="{{ route('admin.testimonials.index', ['status' => 'pending']) }}" class="nav-link">Pending Review</a>
+                            <a href="{{ route('admin.testimonials.index', ['status' => 'pending']) }}"
+                                class="nav-link">Pending Review</a>
                         </li>
                     </ul>
                 </div>
@@ -177,12 +206,14 @@
             <!-- AI Chatbot Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#ai-chatbot-management" role="button"
-                    aria-expanded="false" aria-controls="ai-chatbot-management">
+                    aria-expanded="{{ request()->routeIs('admin.ai-*') || request()->routeIs('admin.qa-*') || request()->routeIs('admin.visitor-*') || request()->routeIs('admin.quick-*') ? 'true' : 'false' }}"
+                    aria-controls="ai-chatbot-management">
                     <i class="link-icon" data-feather="message-circle"></i>
                     <span class="link-title">AI Chatbot</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
                 </a>
-                <div class="collapse" id="ai-chatbot-management">
+                <div class="collapse {{ request()->routeIs('admin.ai-*') || request()->routeIs('admin.qa-*') || request()->routeIs('admin.visitor-*') || request()->routeIs('admin.quick-*') ? 'show' : '' }}"
+                    id="ai-chatbot-management" data-bs-parent="#sidebar-accordion">
                     <ul class="nav sub-menu">
                         <li class="nav-item">
                             <a href="{{ route('admin.ai-dashboard') }}" class="nav-link">AI Dashboard</a>
@@ -209,12 +240,14 @@
             <!-- Marketing Campaign Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#marketing-management" role="button"
-                    aria-expanded="false" aria-controls="marketing-management">
+                    aria-expanded="{{ request()->routeIs('admin.marketing.*') ? 'true' : 'false' }}"
+                    aria-controls="marketing-management">
                     <i class="link-icon" data-feather="mail"></i>
                     <span class="link-title">Marketing Campaigns</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
                 </a>
-                <div class="collapse" id="marketing-management">
+                <div class="collapse {{ request()->routeIs('admin.marketing.*') ? 'show' : '' }}"
+                    id="marketing-management" data-bs-parent="#sidebar-accordion">
                     <ul class="nav sub-menu">
                         <li class="nav-item">
                             <a href="{{ route('admin.marketing.dashboard') }}" class="nav-link">
@@ -280,12 +313,14 @@
             <!-- User Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#user-management" role="button"
-                    aria-expanded="false" aria-controls="user-management">
+                    aria-expanded="{{ request()->routeIs('admin.users.*') ? 'true' : 'false' }}"
+                    aria-controls="user-management">
                     <i class="link-icon" data-feather="user"></i>
                     <span class="link-title">User Management</span>
                     <i class="link-arrow" data-feather="chevron-down"></i>
                 </a>
-                <div class="collapse" id="user-management">
+                <div class="collapse {{ request()->routeIs('admin.users.*') ? 'show' : '' }}" id="user-management"
+                    data-bs-parent="#sidebar-accordion">
                     <ul class="nav sub-menu">
                         <li class="nav-item">
                             <a href="#" class="nav-link">All Users</a>
@@ -309,35 +344,88 @@
 </nav>
 
 @push('scripts')
-<script>
-    // Update failed jobs badge count
-    function updateFailedJobsBadge() {
-        $.ajax({
-            url: '{{ route("admin.marketing.jobs.data") }}',
-            method: 'GET',
-            success: function(response) {
-                const failedCount = (response.stats && response.stats.failed) ? response.stats.failed : 0;
-                const badge = $('#failedJobsBadge');
-                if (failedCount > 0) {
-                    badge.text(failedCount).show();
-                } else {
-                    badge.hide();
+    <script>
+        // Sidebar Accordion Fix - Execute immediately
+        (function() {
+            // On page load, keep only the first .show dropdown visible
+            var allDropdowns = document.querySelectorAll('.sidebar-body .collapse');
+            var hasActiveDropdown = false;
+
+            allDropdowns.forEach(function(dropdown) {
+                if (dropdown.classList.contains('show')) {
+                    if (hasActiveDropdown) {
+                        // Remove show class from additional dropdowns
+                        dropdown.classList.remove('show');
+                        var toggle = document.querySelector('[href="#' + dropdown.id + '"]');
+                        if (toggle) {
+                            toggle.setAttribute('aria-expanded', 'false');
+                        }
+                    } else {
+                        hasActiveDropdown = true;
+                    }
                 }
-            },
-            error: function() {
-                // Silently fail - don't show badge if API fails
-                $('#failedJobsBadge').hide();
+            });
+        })();
+
+        // jQuery ready function for event handlers
+        $(document).ready(function() {
+            // When clicking on a dropdown toggle
+            $('.sidebar-body [data-bs-toggle="collapse"]').on('click', function(e) {
+                e.preventDefault();
+                var target = $(this).attr('href');
+                var targetCollapse = $(target);
+                var isCurrentlyOpen = targetCollapse.hasClass('show');
+
+                // Close all dropdowns first
+                $('.sidebar-body .collapse').removeClass('show');
+                $('.sidebar-body [data-bs-toggle="collapse"]').attr('aria-expanded', 'false');
+
+                // Open the clicked dropdown if it was closed
+                if (!isCurrentlyOpen) {
+                    targetCollapse.addClass('show');
+                    $(this).attr('aria-expanded', 'true');
+                }
+            });
+
+            // Handle Bootstrap collapse events
+            $('.sidebar-body .collapse').on('show.bs.collapse', function(e) {
+                e.stopPropagation();
+                // Close all other dropdowns
+                $('.sidebar-body .collapse').not(this).removeClass('show');
+                $('.sidebar-body [data-bs-toggle="collapse"]').attr('aria-expanded', 'false');
+                var toggle = $('[href="#' + this.id + '"]');
+                toggle.attr('aria-expanded', 'true');
+            });
+        });
+
+        // Update failed jobs badge count
+        function updateFailedJobsBadge() {
+            $.ajax({
+                url: '{{ route('admin.marketing.jobs.data') }}',
+                method: 'GET',
+                success: function(response) {
+                    const failedCount = (response.stats && response.stats.failed) ? response.stats.failed : 0;
+                    const badge = $('#failedJobsBadge');
+                    if (failedCount > 0) {
+                        badge.text(failedCount).show();
+                    } else {
+                        badge.hide();
+                    }
+                },
+                error: function() {
+                    // Silently fail - don't show badge if API fails
+                    $('#failedJobsBadge').hide();
+                }
+            });
+        }
+
+        // Update badge every 30 seconds
+        $(document).ready(function() {
+            // Only update if we're on a page that has the badge
+            if ($('#failedJobsBadge').length > 0) {
+                updateFailedJobsBadge();
+                setInterval(updateFailedJobsBadge, 30000);
             }
         });
-    }
-
-    // Update badge every 30 seconds
-    $(document).ready(function() {
-        // Only update if we're on a page that has the badge
-        if ($('#failedJobsBadge').length > 0) {
-            updateFailedJobsBadge();
-            setInterval(updateFailedJobsBadge, 30000);
-        }
-    });
-</script>
+    </script>
 @endpush

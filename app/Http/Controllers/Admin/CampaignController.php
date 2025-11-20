@@ -309,19 +309,33 @@ class CampaignController extends Controller
         // Update campaign status to sending
         $campaign->update(['status' => 'sending']);
 
-        // Dispatch jobs for each fresh lead
+        // Dispatch jobs for each fresh lead (in batches to avoid timeout)
         $dispatchedCount = 0;
-        foreach ($freshLeads as $campaignLead) {
-            try {
-                \App\Jobs\SendCampaignEmail::dispatch($campaignLead);
-                $dispatchedCount++;
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Failed to dispatch email job for CampaignLead ID: {$campaignLead->id}. Error: {$e->getMessage()}");
+        $batchSize = 50; // Process in batches of 50
+
+        foreach ($freshLeads->chunk($batchSize) as $chunk) {
+            foreach ($chunk as $campaignLead) {
+                try {
+                    \App\Jobs\SendCampaignEmail::dispatch($campaignLead)->onQueue('emails');
+                    $dispatchedCount++;
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Failed to dispatch email job for CampaignLead ID: {$campaignLead->id}. Error: {$e->getMessage()}");
+                }
             }
         }
 
         // Update campaign stats
         $campaign->updateStats();
+
+        // Return JSON response for AJAX requests
+        if (request()->expectsJson() || request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Campaign sending started. {$dispatchedCount} email(s) queued for sending.",
+                'dispatched_count' => $dispatchedCount,
+                'total_leads' => $freshLeads->count()
+            ]);
+        }
 
         return redirect()->back()
             ->with('success', "Campaign sending started. {$dispatchedCount} email(s) queued for sending.");

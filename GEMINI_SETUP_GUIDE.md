@@ -37,7 +37,7 @@ php test_ai_integration.php
    php artisan serve --host=127.0.0.1 --port=8000
    
    # Frontend
-   cd ../Bitsofdev-New
+   cd ../sparkedev-Frontend
    npm run dev
    ```
 

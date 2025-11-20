@@ -1,6 +1,6 @@
-# Contact Form System - Bits Of Dev
+# Contact Form System - sparkedev
 
-This document explains how to set up and use the complete contact form system for your Bits Of Dev project.
+This document explains how to set up and use the complete contact form system for your sparkedev project.
 
 ## 🚀 Features
 
@@ -53,9 +53,9 @@ MAIL_PORT=587
 MAIL_USERNAME=your-email
 MAIL_PASSWORD=your-password
 MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS="hello@bitsofdev.com"
-MAIL_FROM_NAME="Bits Of Dev"
-MAIL_ADMIN_EMAIL="admin@bitsofdev.com"
+MAIL_FROM_ADDRESS="hello@sparkedev.com"
+MAIL_FROM_NAME="sparkedev"
+MAIL_ADMIN_EMAIL="admin@sparkedev.com"
 ```
 
 ### 3. Test Email Configuration

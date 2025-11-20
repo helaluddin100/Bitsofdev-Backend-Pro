@@ -180,7 +180,7 @@ class ContactController extends Controller
     private function sendAdminNotification($contact)
     {
         try {
-            $adminEmail = config('mail.admin_email', 'admin@bitsofdev.com');
+            $adminEmail = config('mail.admin_email', 'admin@sparkedev.com');
             
             Mail::to($adminEmail)->send(new ContactFormNotification($contact));
         } catch (\Exception $e) {

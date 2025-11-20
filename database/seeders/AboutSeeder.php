@@ -17,11 +17,11 @@ class AboutSeeder extends Seeder
     {
         // Create main about information
         $about = About::create([
-            'company_name' => 'BitsOfDev',
-            'hero_title' => 'About BitsOfDev',
+            'company_name' => 'sparkedev',
+            'hero_title' => 'About sparkedev',
             'hero_description' => 'We\'re a passionate team of developers, designers, and digital strategists dedicated to creating exceptional web experiences that drive business growth.',
             'story_title' => 'Our Story',
-            'story_content' => 'Founded in 2019, BitsOfDev started as a small team with a big vision: to help businesses leverage technology to achieve their goals. What began as a passion project has grown into a full-service digital agency. We\'ve had the privilege of working with startups, established businesses, and everything in between. Each project teaches us something new and helps us refine our craft and expand our expertise. Today, we\'re proud to be trusted partners for businesses looking to make their mark in the digital world. Our commitment to excellence, innovation, and client success drives everything we do.',
+            'story_content' => 'Founded in 2019, sparkedev started as a small team with a big vision: to help businesses leverage technology to achieve their goals. What began as a passion project has grown into a full-service digital agency. We\'ve had the privilege of working with startups, established businesses, and everything in between. Each project teaches us something new and helps us refine our craft and expand our expertise. Today, we\'re proud to be trusted partners for businesses looking to make their mark in the digital world. Our commitment to excellence, innovation, and client success drives everything we do.',
             'mission_title' => 'Our Mission',
             'mission_description' => 'To deliver exceptional digital solutions that drive real business results.',
             'vision_title' => 'Our Vision',

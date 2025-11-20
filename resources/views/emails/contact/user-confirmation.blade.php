@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thank you for contacting Bits Of Dev</title>
+    <title>Thank you for contacting sparkedev</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -69,7 +69,7 @@
         <div class="message-box">
             <p>Dear <span class="highlight">{{ $contact->name }}</span>,</p>
             
-            <p>Thank you for reaching out to <strong>Bits Of Dev</strong>! We've successfully received your message and our team will review it shortly.</p>
+            <p>Thank you for reaching out to <strong>sparkedev</strong>! We've successfully received your message and our team will review it shortly.</p>
             
             <p>Here's a summary of what you sent us:</p>
             
@@ -90,9 +90,9 @@
         <a href="{{ config('app.url') }}" class="cta-button">Visit Our Website</a>
         
         <div class="footer">
-            <p><strong>Bits Of Dev</strong></p>
+            <p><strong>sparkedev</strong></p>
             <p>Your trusted partner in web development and digital solutions</p>
-            <p>Email: hello@bitsofdev.com | Phone: +1 (555) 123-4567</p>
+            <p>Email: hello@sparkedev.com | Phone: +1 (555) 123-4567</p>
         </div>
     </div>
 </body>

@@ -30,7 +30,7 @@ class ContactFormSubmitted extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Thank you for contacting Bits Of Dev',
+            subject: 'Thank you for contacting sparkedev',
         );
     }
 

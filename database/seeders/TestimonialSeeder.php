@@ -51,7 +51,7 @@ class TestimonialSeeder extends Seeder
                 'name' => 'Sarah Johnson',
                 'role' => 'CEO',
                 'company' => 'TechStart Inc.',
-                'content' => 'BitsOfDev transformed our vision into a stunning web application. Their attention to detail and technical expertise exceeded our expectations. The team delivered on time and within budget.',
+                'content' => 'sparkedev transformed our vision into a stunning web application. Their attention to detail and technical expertise exceeded our expectations. The team delivered on time and within budget.',
                 'rating' => 5,
                 'project_type' => 'web-development',
                 'project_name' => 'E-commerce Platform',
@@ -139,7 +139,7 @@ class TestimonialSeeder extends Seeder
         if ($rating >= 5) {
             $templates = [
                 'web-development' => [
-                    'BitsOfDev created an amazing website that perfectly represents our brand. The user experience is outstanding and the performance is incredible.',
+                    'sparkedev created an amazing website that perfectly represents our brand. The user experience is outstanding and the performance is incredible.',
                     'Our new website has transformed our online presence. The team understood our vision and delivered beyond our expectations.',
                     'The website they built for us is not only beautiful but also highly functional. Our conversion rates have increased significantly.',
                     'Professional, creative, and technically excellent. They delivered a website that exceeded all our requirements.',
@@ -174,7 +174,7 @@ class TestimonialSeeder extends Seeder
                 'Their expertise in technology consulting was exactly what we needed to move forward.'
             ],
             'seo' => [
-                'Our search engine rankings have improved dramatically since working with BitsOfDev. Great SEO results!',
+                'Our search engine rankings have improved dramatically since working with sparkedev. Great SEO results!',
                 'The SEO optimization work has significantly increased our organic traffic and visibility.',
                 'Professional SEO services that delivered measurable results. Our website traffic has doubled.',
                 'They helped us understand and implement effective SEO strategies. The results speak for themselves.',
@@ -192,7 +192,7 @@ class TestimonialSeeder extends Seeder
                 'They exceeded our expectations with their technical expertise and attention to detail.',
                 'Outstanding service and results. We would definitely work with them again.',
                 'Professional team that delivered high-quality work on time and within budget.',
-                'Great experience working with BitsOfDev. They understood our needs and delivered excellent results.'
+                'Great experience working with sparkedev. They understood our needs and delivered excellent results.'
             ]
         ];
         } else {

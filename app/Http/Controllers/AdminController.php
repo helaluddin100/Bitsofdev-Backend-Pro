@@ -324,13 +324,14 @@ class AdminController extends Controller
             'good evening' => 'Good evening! How may I help you?',
             'assalamu alaikum' => 'Wa Alaikum Assalam! How can I help you?',
             'salam' => 'Wa Alaikum Assalam! What can I do for you?',
-            'company name' => 'We are BitsOfDev - a leading web development company.',
-            'who are you' => 'I am the AI assistant for BitsOfDev. I can help you with information about our services, projects, and more.',
-            'what is bitsofdev' => 'BitsOfDev is a professional web development company specializing in modern web technologies and digital solutions.',
+            'company name' => 'We are sparkedev - a leading web development company.',
+            'who are you' => 'I am the AI assistant for sparkedev. I can help you with information about our services, projects, and more.',
+            'what is sparkedev' => 'Sparkedev is a professional web development company specializing in modern web technologies and digital solutions.',
+            'what is sparkedev' => 'Sparkedev is a professional web development company specializing in modern web technologies and digital solutions.',
             'contact' => 'You can contact us through our contact form on the website or reach out to us directly.',
             'phone' => 'For phone inquiries, please check our contact page for the latest contact information.',
             'email' => 'You can reach us via email through our contact form on the website.',
-            // 'website' => 'You are currently on the BitsOfDev website. We offer web development, mobile app development, and digital solutions.',
+            // 'website' => 'You are currently on the sparkedev website. We offer web development, mobile app development, and digital solutions.',
             'services' => 'We offer web development, mobile app development, UI/UX design, and digital consultation services.',
         ];
 

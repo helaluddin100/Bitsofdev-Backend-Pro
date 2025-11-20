@@ -110,7 +110,7 @@
         <a href="{{ config('app.url') }}/admin/contacts" class="cta-button">View in Dashboard</a>
         
         <div class="footer">
-            <p>This is an automated notification from your Bits Of Dev website.</p>
+            <p>This is an automated notification from your sparkedev website.</p>
             <p>Please respond to this inquiry as soon as possible.</p>
         </div>
     </div>

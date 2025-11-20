@@ -673,10 +673,10 @@ class QAPairController extends Controller
     private function generateAboutAnswer($about, $question)
     {
         if (empty($about)) {
-            return "BitsOfDev is a professional web development company. You can learn more about our story, values, and mission in the about section of our website.";
+            return "sparkedev is a professional web development company. You can learn more about our story, values, and mission in the about section of our website.";
         }
 
-        $answer = "BitsOfDev is a professional web development company. ";
+        $answer = "sparkedev is a professional web development company. ";
 
         if (isset($about['description'])) {
             $answer .= $about['description'] . " ";
@@ -771,8 +771,8 @@ class QAPairController extends Controller
     {
         return [
             'company' => [
-                'name' => 'BitsOfDev',
-                'description' => 'We are BitsOfDev - a leading web development and digital agency',
+                'name' => 'sparkedev',
+                'description' => 'We are sparkedev - a leading web development and digital agency',
                 'founded' => '2019',
                 'experience' => '5+ years',
                 'projects' => '100+ projects delivered',
@@ -882,7 +882,7 @@ class QAPairController extends Controller
 
         // Company information questions
         if (strpos($question, 'company') !== false || strpos($question, 'bits') !== false || strpos($question, 'who are you') !== false) {
-            return "We are BitsOfDev, a leading web development company founded in 2019. With 5+ years of experience, we've delivered 100+ projects to 50+ happy clients. We provide 24/7 support and are committed to delivering exceptional digital solutions.";
+            return "We are sparkedev, a leading web development company founded in 2019. With 5+ years of experience, we've delivered 100+ projects to 50+ happy clients. We provide 24/7 support and are committed to delivering exceptional digital solutions.";
         }
 
         // Specific business type requests (car wash, restaurant, etc.)
@@ -978,7 +978,7 @@ class QAPairController extends Controller
         if ((strpos($question, 'contact') !== false || strpos($question, 'reach') !== false || strpos($question, 'get in touch') !== false) &&
             (strpos($question, 'what') !== false || strpos($question, 'how') !== false || strpos($question, 'do you') !== false || strpos($question, 'can you') !== false || strpos($question, 'can i') !== false)
         ) {
-            return "You can contact us through our contact form on the website, email us at hello@bitsofdev.com, or call us at +1 (555) 123-4567. We respond within 24 hours and offer free consultations to discuss your project needs.";
+            return "You can contact us through our contact form on the website, email us at hello@sparkedev.com, or call us at +1 (555) 123-4567. We respond within 24 hours and offer free consultations to discuss your project needs.";
         }
 
         // Quality/Features questions (require intent words)
@@ -1077,7 +1077,7 @@ class QAPairController extends Controller
             }
 
             // Create enhanced context for the AI
-            $context = "You are BitsOfDev's AI assistant. BitsOfDev is a leading software development agency specializing in web development, mobile apps, marketing, and SEO services.
+            $context = "You are sparkedev's AI assistant. sparkedev is a leading software development agency specializing in web development, mobile apps, marketing, and SEO services.
 
             SERVICES WE PROVIDE:
             - Website Redesign & Modernization (Modern design, mobile responsiveness, user experience improvement)
@@ -1288,7 +1288,7 @@ class QAPairController extends Controller
                 $response = $client->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey, [
                     'headers' => [
                         'Content-Type' => 'application/json',
-                        'User-Agent' => 'BitsOfDev-AI/1.0'
+                        'User-Agent' => 'sparkedev-AI/1.0'
                     ],
                     'json' => [
                         'contents' => [
@@ -1476,7 +1476,7 @@ class QAPairController extends Controller
 
         // Service questions
         if (strpos($question, 'service') !== false || strpos($question, 'what do you do') !== false) {
-            return "We are BitsOfDev, a leading web development and digital agency. Our services include website development, mobile app development, UI/UX design, SEO optimization, digital marketing, and website maintenance. We help businesses establish their online presence and grow their digital footprint. Contact our team to learn more about our services.";
+            return "We are sparkedev, a leading web development and digital agency. Our services include website development, mobile app development, UI/UX design, SEO optimization, digital marketing, and website maintenance. We help businesses establish their online presence and grow their digital footprint. Contact our team to learn more about our services.";
         }
 
         // Project questions

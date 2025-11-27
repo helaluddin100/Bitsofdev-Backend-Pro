@@ -28,9 +28,7 @@ class AIControlController extends Controller
     public function updateSettings(Request $request)
     {
         $request->validate([
-            'ai_provider' => 'required|in:gemini,own_ai,none',
-            'training_mode' => 'boolean',
-            'learning_threshold' => 'integer|min:1|max:100',
+            'ai_provider' => 'required|in:gemini,none',
             'use_static_responses' => 'boolean'
         ]);
 
@@ -52,7 +50,7 @@ class AIControlController extends Controller
     public function switchProvider(Request $request)
     {
         $request->validate([
-            'provider' => 'required|in:gemini,own_ai,none'
+            'provider' => 'required|in:gemini,none'
         ]);
 
         try {

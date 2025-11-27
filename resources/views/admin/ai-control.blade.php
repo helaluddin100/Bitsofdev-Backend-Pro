@@ -3,12 +3,12 @@
 @section('title', 'AI Control Dashboard')
 
 @push('styles')
-<style>
-    .avatar-sm {
-        width: 40px;
-        height: 40px;
-    }
-</style>
+    <style>
+        .avatar-sm {
+            width: 40px;
+            height: 40px;
+        }
+    </style>
 @endpush
 
 @section('content')
@@ -91,35 +91,11 @@
                                         <option value="gemini" {{ $settings->ai_provider == 'gemini' ? 'selected' : '' }}>
                                             Google Gemini
                                         </option>
-                                        <option value="own_ai" {{ $settings->ai_provider == 'own_ai' ? 'selected' : '' }}>
-                                            Own AI (Training Mode)
-                                        </option>
                                         <option value="none" {{ $settings->ai_provider == 'none' ? 'selected' : '' }}>
                                             Disabled
                                         </option>
                                     </select>
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Learning Threshold</label>
-                                    <input type="number" name="learning_threshold"
-                                        value="{{ $settings->learning_threshold }}" min="1" max="100"
-                                        class="form-control">
-                                    <small class="form-text text-muted">Minimum responses needed to activate own AI</small>
-                                </div>
-                            </div>
-
-                            <!-- Toggle Switches -->
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" name="training_mode" value="1"
-                                            {{ $settings->training_mode ? 'checked' : '' }} id="trainingMode">
-                                        <label class="form-check-label" for="trainingMode">
-                                            <strong>Training Mode</strong>
-                                            <br><small class="text-muted">Use own AI instead of external AI</small>
-                                        </label>
-                                    </div>
+                                    <small class="form-text text-muted">Google Gemini API is used for AI responses</small>
                                 </div>
 
                                 <div class="col-md-6 mb-3">
@@ -129,7 +105,7 @@
                                             id="staticResponses">
                                         <label class="form-check-label" for="staticResponses">
                                             <strong>Static Responses</strong>
-                                            <br><small class="text-muted">Enable pre-defined answers</small>
+                                            <br><small class="text-muted">Enable pre-defined answers from database</small>
                                         </label>
                                     </div>
                                 </div>
@@ -161,36 +137,25 @@
                     <div class="card-body">
                         <div class="row">
                             <!-- Switch to Gemini -->
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <form method="POST" action="{{ route('admin.ai.switch-provider') }}">
                                     @csrf
                                     <input type="hidden" name="provider" value="gemini">
                                     <button type="submit" class="btn btn-primary w-100">
                                         <i data-feather="cpu" class="me-2"></i>
-                                        Switch to Gemini
+                                        Enable Gemini
                                     </button>
                                 </form>
                             </div>
 
-                            <!-- Switch to Own AI -->
-                            <div class="col-md-4 mb-3">
+                            <!-- Disable AI -->
+                            <div class="col-md-6 mb-3">
                                 <form method="POST" action="{{ route('admin.ai.switch-provider') }}">
                                     @csrf
-                                    <input type="hidden" name="provider" value="own_ai">
-                                    <button type="submit" class="btn btn-success w-100">
-                                        <i data-feather="brain" class="me-2"></i>
-                                        Switch to Own AI
-                                    </button>
-                                </form>
-                            </div>
-
-                            <!-- Activate Learned Responses -->
-                            <div class="col-md-4 mb-3">
-                                <form method="POST" action="{{ route('admin.ai.activate-learned') }}">
-                                    @csrf
-                                    <button type="submit" class="btn btn-warning w-100">
-                                        <i data-feather="play" class="me-2"></i>
-                                        Activate Learned ({{ $learningStats['pending_review'] }})
+                                    <input type="hidden" name="provider" value="none">
+                                    <button type="submit" class="btn btn-secondary w-100">
+                                        <i data-feather="power" class="me-2"></i>
+                                        Disable AI
                                     </button>
                                 </form>
                             </div>
@@ -330,13 +295,13 @@
 @endsection
 
 @section('js')
-<script>
-    // Initialize Feather icons
-    feather.replace();
+    <script>
+        // Initialize Feather icons
+        feather.replace();
 
-    // Auto-refresh page every 30 seconds to show latest data (optional)
-    // setTimeout(function() {
-    //     location.reload();
-    // }, 30000);
-</script>
+        // Auto-refresh page every 30 seconds to show latest data (optional)
+        // setTimeout(function() {
+        //     location.reload();
+        // }, 30000);
+    </script>
 @endsection

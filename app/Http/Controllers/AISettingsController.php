@@ -41,9 +41,7 @@ class AISettingsController extends Controller
     {
         try {
             $validated = $request->validate([
-                'ai_provider' => 'sometimes|in:gemini,own_ai,none',
-                'training_mode' => 'sometimes|boolean',
-                'learning_threshold' => 'sometimes|integer|min:1|max:100',
+                'ai_provider' => 'sometimes|in:gemini,none',
                 'use_static_responses' => 'sometimes|boolean'
             ]);
 
@@ -73,7 +71,7 @@ class AISettingsController extends Controller
         try {
             $provider = $request->input('provider', 'gemini');
 
-            if (!in_array($provider, ['gemini', 'own_ai', 'none'])) {
+            if (!in_array($provider, ['gemini', 'none'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid AI provider'

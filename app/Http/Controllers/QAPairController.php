@@ -202,97 +202,12 @@ class QAPairController extends Controller
             $userQuestionLower = strtolower($userQuestion);
             $isCustomerNeed = (strpos($userQuestionLower, 'i need') !== false || strpos($userQuestionLower, 'i want') !== false) && strpos($userQuestionLower, 'website') !== false;
 
-            // Check for quick answers only if not a customer need AND static responses are enabled
-            if (! $isCustomerNeed && $aiSettings->use_static_responses) {
-                $quickAnswer = $this->getQuickAnswer($userQuestion, $fullContext);
-                if ($quickAnswer) {
-                    if ($visitorQuestion) {
-                        $visitorQuestion->update([
-                            'answer' => $quickAnswer,
-                            'status' => 'answered',
-                            'admin_notes' => 'Quick answer provided with context',
-                        ]);
-                    }
-
-                    // Store quick answer in conversation history
-                    ConversationMessage::addMessage($sessionId, 'ai', $quickAnswer);
-
-                    return response()->json([
-                        'success' => true,
-                        'data' => [
-                            'question' => $userQuestion,
-                            'response' => $quickAnswer,
-                            'type' => 'quick_answer',
-                            'visitor_question_id' => $visitorQuestion ? $visitorQuestion->id : null,
-                        ],
-                    ]);
-                }
-            }
-
-            // Find matching Q&A pair with timeout protection (skip if customer need detected)
-            $qaPair = null;
-            if (! $isCustomerNeed && $aiSettings->use_static_responses) {
-                try {
-                    $qaPair = QAPair::where('is_active', true)
-                        ->get()
-                        ->first(function ($qa) use ($userQuestion) {
-                            $question = strtolower(trim($qa->question));
-                            $userQuestion = strtolower(trim($userQuestion));
-
-                            // Use more strict matching - require significant overlap
-                            $questionWords = explode(' ', $question);
-                            $userWords = explode(' ', $userQuestion);
-
-                            // If question is very short (1-2 words), require exact match
-                            if (count($questionWords) <= 2) {
-                                return $question === $userQuestion;
-                            }
-
-                            // For longer questions, require at least 70% word overlap
-                            $commonWords = array_intersect($questionWords, $userWords);
-                            $overlapPercentage = count($commonWords) / count($questionWords);
-
-                            return $overlapPercentage >= 0.7;
-                        });
-                } catch (\Exception $e) {
-                    Log::warning('Error searching Q&A pairs: '.$e->getMessage());
-                }
-            }
-
-            if (! $qaPair) {
-                // Try to generate intelligent answer from website content (only if static responses are enabled)
-                if ($aiSettings->use_static_responses) {
-                    $intelligentAnswer = $this->generateAnswerFromWebsiteData($userQuestion);
-
-                    if ($intelligentAnswer) {
-                        // Update visitor question with intelligent answer
-                        if ($visitorQuestion) {
-                            $visitorQuestion->update([
-                                'status' => 'answered',
-                                'admin_notes' => 'Answered using intelligent content analysis',
-                            ]);
-                        }
-
-                        // Store intelligent answer in conversation history
-                        ConversationMessage::addMessage($sessionId, 'ai', $intelligentAnswer);
-
-                        return response()->json([
-                            'success' => true,
-                            'data' => [
-                                'question' => $userQuestion,
-                                'response' => $intelligentAnswer,
-                                'type' => 'intelligent_answer',
-                                'visitor_question_id' => $visitorQuestion ? $visitorQuestion->id : null,
-                            ],
-                        ]);
-                    }
-                }
-
-                // If no intelligent answer, try AI API based on settings
+            // Always use Gemini API - Skip database Q&A pairs
+            // Directly call AI API for all questions
                 $aiAnswer = $this->getAIResponseFromAPI($userQuestion, $aiSettings, $conversationHistory, $fullContext);
 
                 // If AI API fails, try to get a better fallback response
-                if (! $aiAnswer) {
+            if (! $aiAnswer) {
                     $aiAnswer = $this->getIntelligentFallbackResponse($userQuestion, $fullContext);
                 }
 
@@ -304,7 +219,7 @@ class QAPairController extends Controller
                     if ($visitorQuestion) {
                         $visitorQuestion->update([
                             'status' => 'answered',
-                            'admin_notes' => 'Answered using AI API (ChatGPT/Gemini) - Stored for learning',
+                        'admin_notes' => 'Answered using AI API (Gemini) - Stored for learning',
                         ]);
                     }
 
@@ -317,8 +232,8 @@ class QAPairController extends Controller
                             'question' => $userQuestion,
                             'response' => $aiAnswer,
                             'type' => 'ai_generated',
-                            'visitor_question_id' => $visitorQuestion ? $visitorQuestion->id : null,
-                        ],
+                        'visitor_question_id' => $visitorQuestion ? $visitorQuestion->id : null,
+                    ],
                     ]);
                 }
 
@@ -326,7 +241,7 @@ class QAPairController extends Controller
                 if ($visitorQuestion) {
                     $visitorQuestion->update([
                         'status' => 'no_match',
-                        'admin_notes' => 'No matching Q&A pair found and no intelligent answer generated',
+                    'admin_notes' => 'AI API failed to generate response',
                     ]);
                 }
 
@@ -335,53 +250,19 @@ class QAPairController extends Controller
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'No matching answer found for your question',
+                    'message' => 'I apologize, but I\'m having trouble processing your request right now. Please try again later.',
                     'suggestion' => $contactSuggestion,
-                    'contact_link' => config('app.url').'/contact',
+                    'contact_link' => config('app.frontend_url', 'http://localhost:3000').'/contact',
                     'visitor_question_id' => $visitorQuestion ? $visitorQuestion->id : null,
                 ], 404);
-            }
-
-            // Update visitor question with matched Q&A
-            if ($visitorQuestion) {
-                $visitorQuestion->update([
-                    'qa_pair_id' => $qaPair->id,
-                    'status' => 'answered',
-                ]);
-            }
-
-            // Increment usage count
-            try {
-                $qaPair->incrementUsage();
             } catch (\Exception $e) {
-                Log::warning('Failed to increment usage count: '.$e->getMessage());
-            }
-
-            // Get all available answers
-            $answers = $qaPair->answers;
-
-            // Generate AI response by combining answers
-            $aiResponse = $this->generateAIResponse($answers, $userQuestion);
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'question' => $userQuestion,
-                    'response' => $aiResponse,
-                    'matched_qa_id' => $qaPair->id,
-                    'usage_count' => $qaPair->usage_count + 1,
-                    'type' => 'qa_pair',
-                    'visitor_question_id' => $visitorQuestion ? $visitorQuestion->id : null,
-                ],
-            ]);
-        } catch (\Exception $e) {
             Log::error('AI Response Error: '.$e->getMessage());
 
             return response()->json([
                 'success' => false,
                 'message' => 'I apologize, but I\'m having trouble processing your request right now. Please try again later or contact our support team.',
                 'suggestion' => 'Please contact us through our contact page for immediate assistance.',
-                'contact_link' => config('app.url').'/contact',
+                'contact_link' => config('app.frontend_url', 'http://localhost:3000').'/contact',
             ], 500);
         }
     }
@@ -1101,7 +982,7 @@ class QAPairController extends Controller
                         'expected_format' => 'AIza... (at least 35 characters)',
                     ]);
 
-                    return $this->getFallbackResponse($question, $fullContext);
+                return $this->getFallbackResponse($question, $fullContext);
                 }
             }
 
@@ -1115,15 +996,59 @@ class QAPairController extends Controller
                 }
             }
 
-            // Create concise context for the AI (shortened to avoid MAX_TOKENS issue)
-            $context = "You are sparkedev's AI assistant. sparkedev is a software development agency.
+            // Create enhanced context for beautiful and detailed responses
+            $baseUrl = config('app.frontend_url', 'http://localhost:3000');
+            $aboutUrl = $baseUrl . '/about';
+            $contactUrl = $baseUrl . '/contact';
+            $projectsUrl = $baseUrl . '/projects';
+            $pricingUrl = $baseUrl . '/pricing';
+            $blogUrl = $baseUrl . '/blog';
+            $servicesUrl = $baseUrl . '/#services';
 
-SERVICES: Website development, Mobile apps, SEO, Digital marketing, UI/UX design.
+            $context = "You are sparkedev's AI assistant. sparkedev is a leading software development agency specializing in web development, mobile apps, marketing, and SEO services.
 
-RESPONSE GUIDELINES:
-- Be helpful, professional, and concise (2-3 sentences)
-- For pricing/complex projects, suggest contacting the team
-- Keep responses brief and informative";
+COMPANY INFORMATION:
+- We are a professional software development agency
+- We have completed 100+ successful projects
+- We specialize in modern, responsive, and high-performance solutions
+- We provide 24/7 support and ongoing maintenance
+
+            SERVICES WE PROVIDE:
+- Website Development & Redesign (Modern design, mobile responsive, SEO optimized)
+- Mobile App Development (iOS, Android, Cross-platform)
+- SEO Optimization Services (Keyword research, on-page optimization, technical SEO)
+- Digital Marketing Services (Social media marketing, Google Ads, Facebook Ads)
+            - UI/UX Design Services
+- Website Maintenance & Support
+- Performance Optimization
+- Security Updates & Audits
+
+            RESPONSE GUIDELINES:
+- Be friendly, professional, and detailed (3-4 sentences)
+- Provide comprehensive information about our services
+- Use emojis appropriately to make responses engaging (🎨 for design, 💻 for development, 📱 for mobile, etc.)
+- Be conversational and helpful
+- When someone asks about our company, team, or about us - mention our About page with link
+- When someone asks about portfolio, projects, previous work, case studies, examples - mention our Projects page with link
+- When someone asks about pricing, packages, plans, costs - mention our Pricing page with link
+- When someone asks about blog, articles, news, updates - mention our Blog page with link
+- When someone asks about services, what we do, what we offer - mention our Services section
+- When someone needs to contact us, wants to discuss a project, or needs consultation - mention our Contact page with link
+- Always end with a helpful call-to-action when appropriate
+
+IMPORTANT LINKS:
+- About Us page: {$aboutUrl}
+- Projects/Portfolio page: {$projectsUrl}
+- Pricing page: {$pricingUrl}
+- Blog page: {$blogUrl}
+- Services section: {$servicesUrl}
+- Contact Us page: {$contactUrl}
+
+RESPONSE FORMAT:
+- Start with a friendly greeting or acknowledgment
+- Provide detailed, helpful information
+- Include relevant page links when appropriate
+- End with a helpful suggestion or call-to-action";
 
             // Add conversation history to context
             if (! empty($conversationHistory)) {
@@ -1226,7 +1151,7 @@ RESPONSE GUIDELINES:
             if (isset($data['choices'][0]['message']['content'])) {
                 $response = trim($data['choices'][0]['message']['content']);
 
-                return $this->shortenResponse($response);
+                return $this->shortenResponse($response, $question);
             }
 
             return null;
@@ -1339,9 +1264,9 @@ RESPONSE GUIDELINES:
                     // Check for text in parts
                     if (isset($candidate['content']['parts'][0]['text'])) {
                         $responseText = trim($candidate['content']['parts'][0]['text']);
-                        if (!empty($responseText)) {
+                    if (!empty($responseText)) {
                             Log::info('Gemini API success on attempt '.$attempt.' for question: '.substr($question, 0, 50));
-                            return $this->shortenResponse($responseText);
+                            return $this->shortenResponse($responseText, $question);
                         } else {
                             Log::warning('Gemini API returned empty text in response');
                         }
@@ -1454,13 +1379,79 @@ RESPONSE GUIDELINES:
     }
 
     /**
-     * Shorten AI response to keep it concise
+     * Enhance AI response with links and make it beautiful
      */
-    private function shortenResponse($response)
+    private function shortenResponse($response, $question = null)
     {
-        // If response is too long, truncate it
-        if (strlen($response) > 200) {
-            $response = substr($response, 0, 200);
+        $baseUrl = config('app.frontend_url', 'http://localhost:3000');
+        $aboutUrl = $baseUrl . '/about';
+        $contactUrl = $baseUrl . '/contact';
+        $projectsUrl = $baseUrl . '/projects';
+        $pricingUrl = $baseUrl . '/pricing';
+        $blogUrl = $baseUrl . '/blog';
+        $servicesUrl = $baseUrl . '/#services';
+
+        $responseLower = strtolower($response);
+        $questionLower = $question ? strtolower($question) : '';
+
+        // Check if response mentions about/company/team - add about page link
+        $aboutKeywords = ['about', 'company', 'team', 'who are you', 'tell me about', 'your company', 'your team', 'sparkedev', 'about us'];
+        $needsAboutLink = false;
+        foreach ($aboutKeywords as $keyword) {
+            if (strpos($questionLower, $keyword) !== false || strpos($responseLower, $keyword) !== false) {
+                $needsAboutLink = true;
+                break;
+            }
+        }
+
+        // Check if response mentions portfolio/projects/work - add projects page link
+        $projectsKeywords = ['portfolio', 'project', 'projects', 'previous work', 'preview', 'previews', 'case study', 'case studies', 'example', 'examples', 'work', 'works', 'show me', 'see', 'view', 'dakhte', 'dekhte', 'dakha', 'dekha'];
+        $needsProjectsLink = false;
+        foreach ($projectsKeywords as $keyword) {
+            if (strpos($questionLower, $keyword) !== false || strpos($responseLower, $keyword) !== false) {
+                $needsProjectsLink = true;
+                break;
+            }
+        }
+
+        // Check if response mentions pricing/packages/plans - add pricing page link
+        $pricingKeywords = ['price', 'pricing', 'cost', 'costs', 'package', 'packages', 'plan', 'plans', 'rate', 'rates', 'fee', 'fees', 'charge', 'charges'];
+        $needsPricingLink = false;
+        foreach ($pricingKeywords as $keyword) {
+            if (strpos($questionLower, $keyword) !== false || strpos($responseLower, $keyword) !== false) {
+                $needsPricingLink = true;
+                break;
+            }
+        }
+
+        // Check if response mentions blog/articles/news - add blog page link
+        $blogKeywords = ['blog', 'article', 'articles', 'news', 'update', 'updates', 'post', 'posts', 'read', 'writing'];
+        $needsBlogLink = false;
+        foreach ($blogKeywords as $keyword) {
+            if (strpos($questionLower, $keyword) !== false || strpos($responseLower, $keyword) !== false) {
+                $needsBlogLink = true;
+                break;
+            }
+        }
+
+        // Check if response needs contact link (priority check - should be first)
+        $contactKeywords = ['contact', 'contact page', 'contact us', 'quote', 'consultation', 'discuss', 'talk', 'meet', 'reach', 'get in touch', 'hire', 'work with', 'connect', 'message', 'email', 'phone', 'address'];
+        $needsContactLink = false;
+        foreach ($contactKeywords as $keyword) {
+            if (strpos($questionLower, $keyword) !== false || strpos($responseLower, $keyword) !== false) {
+                $needsContactLink = true;
+                break;
+            }
+        }
+
+        // Special case: if question explicitly asks about contact page, always add contact link
+        if (strpos($questionLower, 'contact page') !== false || strpos($questionLower, 'contact link') !== false || strpos($questionLower, 'how to contact') !== false) {
+            $needsContactLink = true;
+        }
+
+        // If response is too long, truncate it intelligently
+        if (strlen($response) > 300) {
+            $response = substr($response, 0, 300);
             // Find the last complete sentence
             $lastPeriod = strrpos($response, '.');
             if ($lastPeriod !== false) {
@@ -1468,14 +1459,39 @@ RESPONSE GUIDELINES:
             }
         }
 
-        // Add contact suggestion for business-related responses
-        $businessKeywords = ['price', 'cost', 'project', 'quote', 'business', 'consultation', 'website', 'service', 'need', 'want', 'create', 'build', 'develop'];
-        $responseLower = strtolower($response);
+        // Add contact page link FIRST if needed (highest priority)
+        if ($needsContactLink && strpos($response, $contactUrl) === false && strpos($responseLower, '/contact') === false) {
+            $response .= "\n\n📞 Contact us: {$contactUrl}";
+        }
 
+        // Add about page link if needed (but not if contact was already added for contact-related questions)
+        if ($needsAboutLink && !$needsContactLink && strpos($response, $aboutUrl) === false && strpos($responseLower, '/about') === false) {
+            $response .= "\n\n📖 Learn more about us: {$aboutUrl}";
+        }
+
+        // Add projects page link if needed (but not if contact was already added for contact-related questions)
+        if ($needsProjectsLink && !$needsContactLink && strpos($response, $projectsUrl) === false && strpos($responseLower, '/projects') === false) {
+            $response .= "\n\n🎨 View our portfolio: {$projectsUrl}";
+        }
+
+        // Add pricing page link if needed (but not if contact was already added for contact-related questions)
+        if ($needsPricingLink && !$needsContactLink && strpos($response, $pricingUrl) === false && strpos($responseLower, '/pricing') === false) {
+            $response .= "\n\n💰 Check our pricing: {$pricingUrl}";
+        }
+
+        // Add blog page link if needed (but not if contact was already added for contact-related questions)
+        if ($needsBlogLink && !$needsContactLink && strpos($response, $blogUrl) === false && strpos($responseLower, '/blog') === false) {
+            $response .= "\n\n📝 Read our blog: {$blogUrl}";
+        }
+
+        // Add general contact suggestion for business-related responses if no link added yet
+        if (!$needsContactLink && !$needsAboutLink && !$needsProjectsLink && !$needsPricingLink && !$needsBlogLink) {
+            $businessKeywords = ['service', 'need', 'want', 'create', 'build', 'develop', 'help'];
         foreach ($businessKeywords as $keyword) {
             if (strpos($responseLower, $keyword) !== false) {
-                $response .= ' For detailed information, please contact our team.';
+                    $response .= "\n\n💬 Need more details? Contact us: {$contactUrl}";
                 break;
+                }
             }
         }
 

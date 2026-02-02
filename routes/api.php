@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Auth\VerificationController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ShopController;
 use App\Http\Controllers\Api\BlogController;
+use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\PricingController;
@@ -61,6 +62,13 @@ Route::get('/projects/featured', [ProjectController::class, 'featured']);
 Route::get('/projects/status/{status}', [ProjectController::class, 'byStatus']);
 Route::get('/projects/technologies', [ProjectController::class, 'technologies']);
 Route::get('/projects/{slug}', [ProjectController::class, 'show']);
+
+// Product API Routes
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/featured', [ProductController::class, 'featured']);
+Route::get('/products/status/{status}', [ProductController::class, 'byStatus']);
+Route::get('/products/technologies', [ProductController::class, 'technologies']);
+Route::get('/products/{slug}', [ProductController::class, 'show']);
 
 // Team API Routes
 Route::get('/team', [TeamController::class, 'index']);

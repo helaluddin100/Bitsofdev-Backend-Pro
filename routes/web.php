@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\BlogController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProjectController;
 use App\Http\Controllers\Admin\TeamController;
 use App\Http\Controllers\Admin\PricingController;
@@ -54,6 +55,9 @@ Route::namespace('App\Http\Controllers')->group(function () {
 
         // Project Management
         Route::resource('projects', ProjectController::class);
+
+        // Product Management
+        Route::resource('products', ProductController::class);
 
         // Team Management
         Route::resource('teams', TeamController::class);

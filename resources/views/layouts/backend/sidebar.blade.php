@@ -80,6 +80,28 @@
                 </div>
             </li>
 
+            <!-- Product Management -->
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="collapse" href="#product-management" role="button"
+                    aria-expanded="{{ request()->routeIs('admin.products.*') ? 'true' : 'false' }}"
+                    aria-controls="product-management">
+                    <i class="link-icon" data-feather="package"></i>
+                    <span class="link-title">Product Management</span>
+                    <i class="link-arrow" data-feather="chevron-down"></i>
+                </a>
+                <div class="collapse {{ request()->routeIs('admin.products.*') ? 'show' : '' }}" id="product-management"
+                    data-bs-parent="#sidebar-accordion">
+                    <ul class="nav sub-menu">
+                        <li class="nav-item">
+                            <a href="{{ route('admin.products.index') }}" class="nav-link">All Products</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.products.create') }}" class="nav-link">Create Product</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
             <!-- Team Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#team-management" role="button"

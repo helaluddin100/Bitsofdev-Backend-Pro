@@ -42,9 +42,13 @@ class ProjectController extends Controller
             });
         }
 
+        // Max 10 items per page (default 10)
+        $perPage = min((int) $request->get('per_page', 10), 10);
+        $perPage = $perPage < 1 ? 10 : $perPage;
+
         $projects = $query->orderBy('priority', 'desc')
             ->latest()
-            ->paginate($request->get('per_page', 9));
+            ->paginate($perPage);
 
         return response()->json([
             'success' => true,

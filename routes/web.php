@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\VisitorDataController;
 use App\Http\Controllers\Admin\ContactController;
 use App\Http\Controllers\Admin\MeetingBookingController;
+use App\Http\Controllers\Admin\NewsletterController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
@@ -100,6 +101,9 @@ Route::namespace('App\Http\Controllers')->group(function () {
         Route::get('meeting-bookings/{meeting_booking}/edit', [MeetingBookingController::class, 'edit'])->name('meeting-bookings.edit');
         Route::put('meeting-bookings/{meeting_booking}', [MeetingBookingController::class, 'update'])->name('meeting-bookings.update');
         Route::delete('meeting-bookings/{meeting_booking}', [MeetingBookingController::class, 'destroy'])->name('meeting-bookings.destroy');
+
+        // Newsletter Subscribers
+        Route::get('newsletter-subscribers', [NewsletterController::class, 'index'])->name('newsletter-subscribers.index');
 
         // Testimonial Management
         Route::resource('testimonials', TestimonialController::class);

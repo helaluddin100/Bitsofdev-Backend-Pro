@@ -204,6 +204,15 @@
                 </a>
             </li>
 
+            <!-- Newsletter Subscribers -->
+            <li class="nav-item">
+                <a href="{{ route('admin.newsletter-subscribers.index') }}"
+                    class="nav-link {{ request()->routeIs('admin.newsletter-subscribers.*') ? 'active' : '' }}">
+                    <i class="link-icon" data-feather="inbox"></i>
+                    <span class="link-title">Newsletter Subscribers</span>
+                </a>
+            </li>
+
             <!-- Testimonials Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#testimonials-management" role="button"

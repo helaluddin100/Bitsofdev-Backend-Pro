@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\AboutController;
 use App\Http\Controllers\Api\VisitorController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\MeetingBookingController;
+use App\Http\Controllers\Api\NewsletterController;
 use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\QAPairController;
 
@@ -93,6 +94,10 @@ Route::post('/contact', [ContactController::class, 'store']);
 
 // Meeting Booking API Routes (public submit)
 Route::post('/meeting-booking', [MeetingBookingController::class, 'store']);
+
+// Newsletter subscribe (public)
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/contacts', [ContactController::class, 'index']);
     Route::get('/admin/contacts/{contact}', [ContactController::class, 'show']);

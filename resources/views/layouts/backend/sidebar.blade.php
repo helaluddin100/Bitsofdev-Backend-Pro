@@ -195,6 +195,15 @@
                 </a>
             </li>
 
+            <!-- Meeting Bookings -->
+            <li class="nav-item">
+                <a href="{{ route('admin.meeting-bookings.index') }}"
+                    class="nav-link {{ request()->routeIs('admin.meeting-bookings.*') ? 'active' : '' }}">
+                    <i class="link-icon" data-feather="video"></i>
+                    <span class="link-title">Meeting Bookings</span>
+                </a>
+            </li>
+
             <!-- Testimonials Management -->
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="collapse" href="#testimonials-management" role="button"

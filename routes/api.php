@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\PricingController;
 use App\Http\Controllers\Api\AboutController;
 use App\Http\Controllers\Api\VisitorController;
 use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\MeetingBookingController;
 use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\QAPairController;
 
@@ -89,12 +90,22 @@ Route::middleware('visitor.tracking')->group(function () {
 
 // Contact Form API Routes
 Route::post('/contact', [ContactController::class, 'store']);
+
+// Meeting Booking API Routes (public submit)
+Route::post('/meeting-booking', [MeetingBookingController::class, 'store']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/contacts', [ContactController::class, 'index']);
     Route::get('/admin/contacts/{contact}', [ContactController::class, 'show']);
     Route::put('/admin/contacts/{contact}', [ContactController::class, 'update']);
     Route::delete('/admin/contacts/{contact}', [ContactController::class, 'destroy']);
     Route::get('/admin/contacts/statistics', [ContactController::class, 'statistics']);
+
+    // Meeting Bookings (admin)
+    Route::get('/admin/meeting-bookings', [MeetingBookingController::class, 'index']);
+    Route::get('/admin/meeting-bookings/statistics', [MeetingBookingController::class, 'statistics']);
+    Route::get('/admin/meeting-bookings/{meeting_booking}', [MeetingBookingController::class, 'show']);
+    Route::put('/admin/meeting-bookings/{meeting_booking}', [MeetingBookingController::class, 'update']);
+    Route::delete('/admin/meeting-bookings/{meeting_booking}', [MeetingBookingController::class, 'destroy']);
 });
 
 // Testimonials API Routes

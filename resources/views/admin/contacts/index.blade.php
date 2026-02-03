@@ -111,9 +111,9 @@
                         </div>
                     </div>
 
-                    <!-- Contacts Table -->
+                    <!-- Contacts Table: use contactsTable so global DataTables does not re-sort (server order = newest first) -->
                     <div class="table-responsive">
-                        <table id="dataTableExample" class="table">
+                        <table id="contactsTable" class="table">
                             <thead>
                                 <tr>
                                     <th>#ID</th>

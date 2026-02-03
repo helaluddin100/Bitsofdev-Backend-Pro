@@ -32,8 +32,8 @@ class ContactController extends Controller
             });
         }
 
-        // Sort by latest first
-        $query->orderBy('created_at', 'desc');
+        // Newest contact first (last submitted = top of list). Do not use id="dataTableExample" on this table or JS will re-sort.
+        $query->orderBy('created_at', 'desc')->orderBy('id', 'desc');
 
         $contacts = $query->paginate(15);
         $stats = $this->getStatistics();

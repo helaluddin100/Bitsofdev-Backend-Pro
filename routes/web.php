@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\AboutController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\VisitorDataController;
 use App\Http\Controllers\Admin\ContactController;
+use App\Http\Controllers\Admin\MeetingBookingController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
@@ -92,6 +93,13 @@ Route::namespace('App\Http\Controllers')->group(function () {
         // Contact Management
         Route::resource('contacts', ContactController::class);
         Route::get('contacts/export', [ContactController::class, 'export'])->name('contacts.export');
+
+        // Meeting Bookings (index, show, edit, update, destroy - no create/store)
+        Route::get('meeting-bookings', [MeetingBookingController::class, 'index'])->name('meeting-bookings.index');
+        Route::get('meeting-bookings/{meeting_booking}', [MeetingBookingController::class, 'show'])->name('meeting-bookings.show');
+        Route::get('meeting-bookings/{meeting_booking}/edit', [MeetingBookingController::class, 'edit'])->name('meeting-bookings.edit');
+        Route::put('meeting-bookings/{meeting_booking}', [MeetingBookingController::class, 'update'])->name('meeting-bookings.update');
+        Route::delete('meeting-bookings/{meeting_booking}', [MeetingBookingController::class, 'destroy'])->name('meeting-bookings.destroy');
 
         // Testimonial Management
         Route::resource('testimonials', TestimonialController::class);
